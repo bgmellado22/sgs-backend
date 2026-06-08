@@ -1,7 +1,9 @@
 package com.conectatech.sgs_backend.controller;
 
-import com.conectatech.sgs_backend.model.Incidente;
+import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
+import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
 import com.conectatech.sgs_backend.service.IncidenteService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,18 +20,13 @@ public class IncidenteController {
     private final IncidenteService incidenteService;
 
     @GetMapping
-    public ResponseEntity<List<Incidente>> obtenerTodos() {
+    public ResponseEntity<List<IncidenteResponseDTO>> obtenerTodos() {
         return ResponseEntity.ok(incidenteService.obtenerTodos());
     }
 
     @PostMapping
-    public ResponseEntity<Incidente> crearIncidente(@RequestBody Incidente nuevoIncidente) {
-        Incidente incidenteGuardado = incidenteService.crearIncidente(nuevoIncidente);
-        return new ResponseEntity<>(incidenteGuardado, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<Incidente>> obtenerPorEstado(@PathVariable String estado) {
-        return ResponseEntity.ok(incidenteService.obtenerPorEstado(estado));
+    public ResponseEntity<IncidenteResponseDTO> crearIncidente(@Valid @RequestBody IncidenteRequestDTO dto) {
+        IncidenteResponseDTO response = incidenteService.crearIncidente(dto);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }

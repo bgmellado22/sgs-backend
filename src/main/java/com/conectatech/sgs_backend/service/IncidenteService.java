@@ -1,5 +1,7 @@
 package com.conectatech.sgs_backend.service;
 
+import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
+import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
 import com.conectatech.sgs_backend.model.Incidente;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import lombok.RequiredArgsConstructor;
@@ -7,24 +9,52 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class IncidenteService {
     private final IncidenteRepository incidenteRepository;
 
-    public List<Incidente> obtenerTodos() {
-        return incidenteRepository.findAll();
+    // Guardar
+    public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto) {
+        Incidente incidente = new Incidente();
+
+        incidente.setCategoria(dto.getCategoria());
+        incidente.setTipo(dto.getTipo());
+        incidente.setDescripcion(dto.getDescripcion());
+        incidente.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "Media");
+        incidente.setOrigen(dto.getOrigen());
+
+        incidente.setCodigoCorrelativo("INC-" + (int) (Math.random() * 900 + 100));
+        incidente.setEstado("Pendiente");
+        incidente.setFechaCreacion(LocalDateTime.now());
+
+        Incidente guardado = incidenteRepository.save(incidente);
+
+        return mapToDTO(guardado);
     }
 
-    public Incidente crearIncidente(Incidente nuevoIncidente) {
-        // Todo incidente nuevo debe registrar la hora exacta del servidor
-        nuevoIncidente.setFechaCreacion(LocalDateTime.now());
-
-        return incidenteRepository.save(nuevoIncidente);
+    // Listar
+    public List<IncidenteResponseDTO> obtenerTodos() {
+        return incidenteRepository.findAll()
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Incidente> obtenerPorEstado(String estado) {
-        return incidenteRepository.findByEstado(estado);
+    // Traducir Entidad a DTO
+    private IncidenteResponseDTO mapToDTO(Incidente incidente) {
+        IncidenteResponseDTO dto = new IncidenteResponseDTO();
+        dto.setId(incidente.getId());
+        dto.setCodigoCorrelativo(incidente.getCodigoCorrelativo());
+        dto.setCategoria(incidente.getCategoria());
+        dto.setTipo(incidente.getTipo());
+        dto.setDescripcion(incidente.getDescripcion());
+        dto.setPrioridad(incidente.getPrioridad());
+        dto.setEstado(incidente.getEstado());
+        dto.setFechaCreacion(incidente.getFechaCreacion());
+        dto.setOrigen(incidente.getOrigen());
+        return dto;
     }
 }
