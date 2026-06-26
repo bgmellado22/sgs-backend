@@ -57,4 +57,24 @@ public class IncidenteService {
         dto.setOrigen(incidente.getOrigen());
         return dto;
     }
+
+    // Método para actualizar el estado de un incidente
+    public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado) {
+        Incidente incidenteExistente = incidenteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Error: Incidente no encontrado con el ID: " + id));
+
+        incidenteExistente.setEstado(nuevoEstado);
+
+        Incidente actualizado = incidenteRepository.save(incidenteExistente);
+
+        return mapToDTO(actualizado);
+    }
+
+    // Método para eliminar un incidente
+    public void eliminarIncidente(String id) {
+        if (!incidenteRepository.existsById(id)) {
+            throw new RuntimeException("Error: No se puede eliminar. Incidente no encontrado con ID: " + id);
+        }
+        incidenteRepository.deleteById(id);
+    }
 }

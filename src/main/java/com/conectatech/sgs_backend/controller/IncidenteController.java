@@ -29,4 +29,20 @@ public class IncidenteController {
         IncidenteResponseDTO response = incidenteService.crearIncidente(dto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<IncidenteResponseDTO> actualizarEstado(
+            @PathVariable("id") String id,
+            @RequestBody java.util.Map<String, String> body) {
+        String nuevoEstado = body.get("estado");
+
+        IncidenteResponseDTO response = incidenteService.actualizarEstado(id, nuevoEstado);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarIncidente(@PathVariable("id") String id) {
+        incidenteService.eliminarIncidente(id);
+        return ResponseEntity.noContent().build();
+    }
 }
