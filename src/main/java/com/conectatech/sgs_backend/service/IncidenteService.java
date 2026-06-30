@@ -37,7 +37,7 @@ public class IncidenteService {
 
     // Listar
     public List<IncidenteResponseDTO> obtenerTodos() {
-        return incidenteRepository.findAll()
+        return incidenteRepository.findByActivoTrue()
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -72,9 +72,12 @@ public class IncidenteService {
 
     // Método para eliminar un incidente
     public void eliminarIncidente(String id) {
-        if (!incidenteRepository.existsById(id)) {
-            throw new RuntimeException("Error: No se puede eliminar. Incidente no encontrado con ID: " + id);
-        }
-        incidenteRepository.deleteById(id);
+        Incidente incidenteExistente = incidenteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "Error: No se puede eliminar. Incidente no encontrado con ID: " + id));
+
+        incidenteExistente.setActivo(false);
+
+        incidenteRepository.save(incidenteExistente);
     }
 }

@@ -34,4 +34,6 @@ public class Incidente {
     private GeoJsonPoint ubicacion;
 
     private String origen;
+
+    private boolean activo = true;
 }
