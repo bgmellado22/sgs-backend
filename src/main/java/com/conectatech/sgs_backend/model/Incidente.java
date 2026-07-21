@@ -7,6 +7,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 
 import java.time.LocalDateTime;
 
@@ -31,7 +33,9 @@ public class Incidente {
     @Field("fecha_creacion")
     private LocalDateTime fechaCreacion;
 
-    private GeoJsonPoint ubicacion;
+    @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
+    private GeoJsonPoint location;
+    private String direccionTexto;
 
     private String origen;
 

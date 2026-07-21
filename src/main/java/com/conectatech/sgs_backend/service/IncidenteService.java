@@ -6,6 +6,7 @@ import com.conectatech.sgs_backend.model.Incidente;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +26,9 @@ public class IncidenteService {
         incidente.setDescripcion(dto.getDescripcion());
         incidente.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "Media");
         incidente.setOrigen(dto.getOrigen());
+        GeoJsonPoint puntoGPS = new GeoJsonPoint(dto.getLongitud(), dto.getLatitud());
+        incidente.setLocation(puntoGPS);
+        incidente.setDireccionTexto(dto.getDireccionTexto());
 
         incidente.setCodigoCorrelativo("INC-" + (int) (Math.random() * 900 + 100));
         incidente.setEstado("Pendiente");

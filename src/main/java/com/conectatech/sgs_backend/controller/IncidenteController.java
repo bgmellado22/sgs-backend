@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -24,10 +26,22 @@ public class IncidenteController {
         return ResponseEntity.ok(incidenteService.obtenerTodos());
     }
 
-    @PostMapping
-    public ResponseEntity<IncidenteResponseDTO> crearIncidente(@Valid @RequestBody IncidenteRequestDTO dto) {
-        IncidenteResponseDTO response = incidenteService.crearIncidente(dto);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> crearIncidente(
+            @RequestPart("incidente") @Valid IncidenteRequestDTO incidenteDTO,
+            @RequestPart(value = "evidencia", required = false) MultipartFile foto) {
+
+        try {
+            IncidenteResponseDTO nuevoIncidente = incidenteService.crearIncidente(incidenteDTO);
+
+            if (foto != null && !foto.isEmpty()) {
+                System.out.println("Foto recibida. Nombre: " + foto.getOriginalFilename());
+            }
+
+            return ResponseEntity.ok(nuevoIncidente);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
     }
 
     @PatchMapping("/{id}/estado")
