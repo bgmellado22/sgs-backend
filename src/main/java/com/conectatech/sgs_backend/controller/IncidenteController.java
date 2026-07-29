@@ -27,21 +27,17 @@ public class IncidenteController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> crearIncidente(
-            @RequestPart("incidente") @Valid IncidenteRequestDTO incidenteDTO,
+    public ResponseEntity<IncidenteResponseDTO> crearIncidente(
+            @Valid @RequestPart("incidente") IncidenteRequestDTO incidenteDTO,
             @RequestPart(value = "evidencia", required = false) MultipartFile foto) {
 
-        try {
-            IncidenteResponseDTO nuevoIncidente = incidenteService.crearIncidente(incidenteDTO);
+        IncidenteResponseDTO nuevoIncidente = incidenteService.crearIncidente(incidenteDTO);
 
-            if (foto != null && !foto.isEmpty()) {
-                System.out.println("Foto recibida. Nombre: " + foto.getOriginalFilename());
-            }
-
-            return ResponseEntity.ok(nuevoIncidente);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        if (foto != null && !foto.isEmpty()) {
+            System.out.println("Foto recibida. Nombre: " + foto.getOriginalFilename());
         }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(nuevoIncidente);
     }
 
     @PatchMapping("/{id}/estado")
