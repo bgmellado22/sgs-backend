@@ -3,6 +3,7 @@ package com.conectatech.sgs_backend.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,7 +31,20 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // rutas públicas
                         .requestMatchers("/api/auth/**").permitAll()
+                        // módulo de administración
+                        .requestMatchers("/api/usuarios/**", "/api/catalogos/**").hasRole("ADMINISTRADOR")
+                        // módulo de reportes
+                        .requestMatchers("/api/reportes/**").hasRole("ADMINISTRADOR")
+                        // módulo de incidentes
+                        .requestMatchers(HttpMethod.POST, "/api/incidentes/**")
+                        .hasAnyRole("ADMINISTRADOR", "OPERADOR", "CIUDADANO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/incidentes/**").hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/incidentes/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/incidentes/**")
+                        .hasAnyRole("ADMINISTRADOR", "OPERADOR", "SUPERVISOR")
+                        // resto de rutas que exigen estar autenticado
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
