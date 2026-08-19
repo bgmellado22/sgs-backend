@@ -1,6 +1,7 @@
 package com.conectatech.sgs_backend.controller;
 
 import com.conectatech.sgs_backend.dto.UsuarioResponseDTO;
+import com.conectatech.sgs_backend.dto.UsuarioUpdateDTO;
 import com.conectatech.sgs_backend.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,5 +20,14 @@ public class UsuarioController {
     @GetMapping
     public ResponseEntity<List<UsuarioResponseDTO>> obtenerUsuarios() {
         return ResponseEntity.ok(usuarioService.obtenerTodosLosUsuarios());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(
+            @PathVariable String id,
+            @RequestBody UsuarioUpdateDTO updateDTO) {
+
+        UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarUsuario(id, updateDTO);
+        return ResponseEntity.ok(usuarioActualizado);
     }
 }
