@@ -14,42 +14,60 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UsuarioService {
 
-    private final UsuarioRepository usuarioRepository;
+        private final UsuarioRepository usuarioRepository;
 
-    // Obtener usuarios
-    public List<UsuarioResponseDTO> obtenerTodosLosUsuarios() {
-        List<Usuario> usuarios = usuarioRepository.findAll();
+        // Obtener usuarios
+        public List<UsuarioResponseDTO> obtenerTodosLosUsuarios() {
+                List<Usuario> usuarios = usuarioRepository.findAll();
 
-        return usuarios.stream()
-                .map(usuario -> UsuarioResponseDTO.builder()
-                        .id(usuario.getId())
-                        .rut(usuario.getRut())
-                        .nombreCompleto(usuario.getNombreCompleto())
-                        .email(usuario.getEmail())
-                        .rol(usuario.getRol())
-                        .estado(usuario.getEstado())
-                        .build())
-                .collect(Collectors.toList());
-    }
+                return usuarios.stream()
+                                .map(usuario -> UsuarioResponseDTO.builder()
+                                                .id(usuario.getId())
+                                                .rut(usuario.getRut())
+                                                .nombreCompleto(usuario.getNombreCompleto())
+                                                .email(usuario.getEmail())
+                                                .rol(usuario.getRol())
+                                                .estado(usuario.getEstado())
+                                                .build())
+                                .collect(Collectors.toList());
+        }
 
-    // Actualizar usuario
-    public UsuarioResponseDTO actualizarUsuario(String id, UsuarioUpdateDTO dto) {
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+        // Actualizar usuario
+        public UsuarioResponseDTO actualizarUsuario(String id, UsuarioUpdateDTO dto) {
+                Usuario usuario = usuarioRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
 
-        usuario.setNombreCompleto(dto.getNombreCompleto());
-        usuario.setEmail(dto.getEmail());
-        usuario.setRol(dto.getRol());
+                usuario.setNombreCompleto(dto.getNombreCompleto());
+                usuario.setEmail(dto.getEmail());
+                usuario.setRol(dto.getRol());
 
-        Usuario usuarioActualizado = usuarioRepository.save(usuario);
+                Usuario usuarioActualizado = usuarioRepository.save(usuario);
 
-        return UsuarioResponseDTO.builder()
-                .id(usuarioActualizado.getId())
-                .rut(usuarioActualizado.getRut())
-                .nombreCompleto(usuarioActualizado.getNombreCompleto())
-                .email(usuarioActualizado.getEmail())
-                .rol(usuarioActualizado.getRol())
-                .estado(usuarioActualizado.getEstado())
-                .build();
-    }
+                return UsuarioResponseDTO.builder()
+                                .id(usuarioActualizado.getId())
+                                .rut(usuarioActualizado.getRut())
+                                .nombreCompleto(usuarioActualizado.getNombreCompleto())
+                                .email(usuarioActualizado.getEmail())
+                                .rol(usuarioActualizado.getRol())
+                                .estado(usuarioActualizado.getEstado())
+                                .build();
+        }
+
+        // Cambiar estado del usuario
+        public UsuarioResponseDTO cambiarEstadoUsuario(String id) {
+                Usuario usuario = usuarioRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                usuario.setEstado(!usuario.getEstado());
+
+                Usuario usuarioActualizado = usuarioRepository.save(usuario);
+
+                return UsuarioResponseDTO.builder()
+                                .id(usuarioActualizado.getId())
+                                .rut(usuarioActualizado.getRut())
+                                .nombreCompleto(usuarioActualizado.getNombreCompleto())
+                                .email(usuarioActualizado.getEmail())
+                                .rol(usuarioActualizado.getRol())
+                                .estado(usuarioActualizado.getEstado())
+                                .build();
+        }
 }

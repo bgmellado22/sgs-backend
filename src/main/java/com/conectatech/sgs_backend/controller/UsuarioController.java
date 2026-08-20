@@ -30,4 +30,10 @@ public class UsuarioController {
         UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarUsuario(id, updateDTO);
         return ResponseEntity.ok(usuarioActualizado);
     }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<UsuarioResponseDTO> cambiarEstadoUsuario(@PathVariable String id) {
+        UsuarioResponseDTO usuarioActualizado = usuarioService.cambiarEstadoUsuario(id);
+        return ResponseEntity.ok(usuarioActualizado);
+    }
 }
