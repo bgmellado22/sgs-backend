@@ -8,10 +8,12 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -40,6 +42,13 @@ public class Usuario implements UserDetails {
     private Boolean estado;
 
     private String fcmToken;
+
+    @Field("intentos_fallidos")
+    @Builder.Default
+    private Integer intentosFallidos = 0;
+
+    @Field("bloqueado_hasta")
+    private LocalDateTime bloqueadoHasta;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

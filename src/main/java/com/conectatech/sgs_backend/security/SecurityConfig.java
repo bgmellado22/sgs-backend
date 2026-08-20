@@ -31,6 +31,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // sudo requiere autenticación
+                        .requestMatchers("/api/auth/sudo").authenticated()
                         // rutas públicas
                         .requestMatchers("/api/auth/**").permitAll()
                         // módulo de administración

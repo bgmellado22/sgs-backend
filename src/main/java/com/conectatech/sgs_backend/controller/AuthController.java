@@ -1,5 +1,6 @@
 package com.conectatech.sgs_backend.controller;
 
+import com.conectatech.sgs_backend.dto.SudoRequestDTO;
 import com.conectatech.sgs_backend.dto.auth.AuthResponse;
 import com.conectatech.sgs_backend.dto.auth.LoginRequest;
 import com.conectatech.sgs_backend.dto.auth.RegisterRequest;
@@ -9,6 +10,7 @@ import com.conectatech.sgs_backend.service.AuthService;
 import com.conectatech.sgs_backend.service.PasswordResetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -45,5 +47,11 @@ public class AuthController {
         } else {
             return ResponseEntity.badRequest().body("Token inválido o expirado.");
         }
+    }
+
+    @PostMapping("/sudo")
+    public ResponseEntity<?> validarSudoMode(@RequestBody SudoRequestDTO request, Authentication authentication) {
+        authService.verificarSudo(authentication.getName(), request.getPassword());
+        return ResponseEntity.ok().build();
     }
 }
