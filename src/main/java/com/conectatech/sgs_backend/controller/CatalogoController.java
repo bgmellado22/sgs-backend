@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/catalogos")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = { "http://localhost:5173", "https://sgs-el-tabo-frontend.vercel.app" })
 @RequiredArgsConstructor
 public class CatalogoController {
     private final CatalogoService service;
