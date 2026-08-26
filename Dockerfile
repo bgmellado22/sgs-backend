@@ -1,7 +1,12 @@
 # Compilación con JDK 17 y Gradle
 FROM gradle:8.7-jdk17 AS build
 WORKDIR /app
+
+# Copiamos los archivos del proyecto
 COPY . .
+
+# Otorgamos permisos de ejecución a gradlew antes de compilar
+RUN chmod +x ./gradlew
 RUN ./gradlew clean bootJar -x test --no-daemon
 
 # Imagen ligera de ejecución 
