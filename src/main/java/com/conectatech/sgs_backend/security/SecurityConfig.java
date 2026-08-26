@@ -31,22 +31,35 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // sudo requiere autenticación
+                        // Endpoint Sudo (Requiere autenticación previa)
                         .requestMatchers("/api/auth/sudo").authenticated()
-                        // rutas públicas
-                        .requestMatchers("/api/auth/**").permitAll()
-                        // módulo de administración
+
+                        // Rutas públicas: Autenticación, Swagger y ruta interna de errores de Spring
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/**",
+                                "/error",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html")
+                        .permitAll()
+
+                        // Módulo de Administración
                         .requestMatchers("/api/usuarios/**", "/api/catalogos/**").hasRole("ADMINISTRADOR")
-                        // módulo de reportes
+
+                        // Módulo de Reportes
                         .requestMatchers("/api/reportes/**").hasRole("ADMINISTRADOR")
-                        // módulo de incidentes
+
+                        // Módulo de Incidentes
                         .requestMatchers(HttpMethod.POST, "/api/incidentes/**")
                         .hasAnyRole("ADMINISTRADOR", "OPERADOR", "CIUDADANO")
                         .requestMatchers(HttpMethod.PATCH, "/api/incidentes/**").hasAnyRole("ADMINISTRADOR", "OPERADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/incidentes/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.GET, "/api/incidentes/**")
                         .hasAnyRole("ADMINISTRADOR", "OPERADOR", "SUPERVISOR")
-                        // resto de rutas que exigen estar autenticado
+
+                        // Cualquier otra ruta exige token válido
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -59,7 +72,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+
+        // Permitir tanto desarrollo local como producción en Vercel
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "https://sgs-el-tabo-frontend.vercel.app"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
