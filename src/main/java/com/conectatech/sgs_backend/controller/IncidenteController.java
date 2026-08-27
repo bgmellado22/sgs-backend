@@ -2,6 +2,7 @@ package com.conectatech.sgs_backend.controller;
 
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
+import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.service.IncidenteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,11 @@ public class IncidenteController {
     @GetMapping
     public ResponseEntity<List<IncidenteResponseDTO>> obtenerTodos() {
         return ResponseEntity.ok(incidenteService.obtenerTodos());
+    }
+
+    @GetMapping("/{id}/bitacora")
+    public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacora(@PathVariable String id) {
+        return ResponseEntity.ok(incidenteService.obtenerHistorial(id));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
