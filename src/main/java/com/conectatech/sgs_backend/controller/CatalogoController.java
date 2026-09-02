@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/catalogos")
+@RequestMapping("/api/v1/catalogos")
 @CrossOrigin(origins = { "http://localhost:5173", "https://sgs-el-tabo-frontend.vercel.app" })
 @RequiredArgsConstructor
 public class CatalogoController {

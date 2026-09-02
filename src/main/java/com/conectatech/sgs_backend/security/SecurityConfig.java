@@ -22,68 +22,73 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
-    private final AuthenticationProvider authenticationProvider;
+        private final JwtAuthenticationFilter jwtAuthFilter;
+        private final AuthenticationProvider authenticationProvider;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        // Endpoint Sudo (Requiere autenticación previa)
-                        .requestMatchers("/api/auth/sudo").authenticated()
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .authorizeHttpRequests(auth -> auth
+                                                // Endpoint Sudo (Requiere autenticación previa)
+                                                .requestMatchers("/api/auth/sudo").authenticated()
 
-                        // Rutas públicas: Autenticación, Swagger y ruta interna de errores de Spring
-                        .requestMatchers(
-                                "/api/auth/login",
-                                "/api/auth/register",
-                                "/api/auth/**",
-                                "/api/health",
-                                "/error",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html")
-                        .permitAll()
+                                                // Rutas públicas: Autenticación, Swagger y ruta interna de errores de
+                                                // Spring
+                                                .requestMatchers(
+                                                                "/api/auth/login",
+                                                                "/api/auth/register",
+                                                                "/api/auth/**",
+                                                                "/api/health",
+                                                                "/error",
+                                                                "/v3/api-docs/**",
+                                                                "/swagger-ui/**",
+                                                                "/swagger/**",
+                                                                "/swagger-ui.html")
+                                                .permitAll()
 
-                        // Módulo de Administración
-                        .requestMatchers("/api/usuarios/**", "/api/catalogos/**").hasRole("ADMINISTRADOR")
+                                                // Módulo de Administración
+                                                .requestMatchers("/api/usuarios/**", "/api/catalogos/**")
+                                                .hasRole("ADMINISTRADOR")
 
-                        // Módulo de Reportes
-                        .requestMatchers("/api/reportes/**").hasRole("ADMINISTRADOR")
+                                                // Módulo de Reportes
+                                                .requestMatchers("/api/reportes/**").hasRole("ADMINISTRADOR")
 
-                        // Módulo de Incidentes
-                        .requestMatchers(HttpMethod.POST, "/api/incidentes/**")
-                        .hasAnyRole("ADMINISTRADOR", "OPERADOR", "CIUDADANO")
-                        .requestMatchers(HttpMethod.PATCH, "/api/incidentes/**").hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                        .requestMatchers(HttpMethod.DELETE, "/api/incidentes/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.GET, "/api/incidentes/**")
-                        .hasAnyRole("ADMINISTRADOR", "OPERADOR", "SUPERVISOR")
+                                                // Módulo de Incidentes
+                                                .requestMatchers(HttpMethod.POST, "/api/incidentes/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "CIUDADANO")
+                                                .requestMatchers(HttpMethod.PATCH, "/api/incidentes/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/incidentes/**")
+                                                .hasRole("ADMINISTRADOR")
+                                                .requestMatchers(HttpMethod.GET, "/api/incidentes/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "SUPERVISOR")
 
-                        // Cualquier otra ruta exige token válido
-                        .anyRequest().authenticated())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                                                // Cualquier otra ruta exige token válido
+                                                .anyRequest().authenticated())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authenticationProvider(authenticationProvider)
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration config = new CorsConfiguration();
 
-        // Permitir tanto desarrollo local como producción en Vercel
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "https://sgs-el-tabo-frontend.vercel.app"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+                // Permitir tanto desarrollo local como producción en Vercel
+                config.setAllowedOrigins(List.of(
+                                "http://localhost:5173",
+                                "https://sgs-el-tabo-frontend.vercel.app"));
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of("*"));
+                config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return source;
+        }
 }

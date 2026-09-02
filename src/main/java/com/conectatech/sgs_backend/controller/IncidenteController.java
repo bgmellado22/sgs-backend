@@ -15,7 +15,7 @@ import org.springframework.http.MediaType;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/incidentes")
+@RequestMapping("/api/v1/incidentes")
 @CrossOrigin(origins = { "http://localhost:5173", "https://sgs-el-tabo-frontend.vercel.app" })
 @RequiredArgsConstructor
 public class IncidenteController {

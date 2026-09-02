@@ -40,6 +40,15 @@ dependencies {
 	
 	// Librería para envío de correos de recuperación
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	// DEPENDENCIAS PARA PROGRAMACIÓN WEB II
+
+	// Migraciones para MongoDB
+	implementation 'io.mongock:mongock-springboot:5.4.4'
+	implementation 'io.mongock:mongodb-springdata-v4-driver:5.4.4'
+
+	// Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 }
 
 tasks.named('test') {
