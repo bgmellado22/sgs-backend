@@ -15,6 +15,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.conectatech.sgs_backend.security.JwtAuthenticationFilter;
 import com.conectatech.sgs_backend.security.JwtUtil;
 
 import java.time.LocalDateTime;
@@ -25,19 +26,21 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @WebMvcTest(IncidenteController.class)
-@Import(SecurityConfig.class) // Carga explícita de las reglas de seguridad
+@Import({ SecurityConfig.class, JwtAuthenticationFilter.class }) // Carga explícita de las reglas de seguridad
 public class IncidenteControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    // ── Dependencia directa del controlador ──
+    // Dependencia directa del controlador
     @MockitoBean
     private IncidenteService incidenteService;
 
-    // ── Dependencias de la cadena de seguridad ──
+    // Dependencias de la cadena de seguridad
     // SecurityConfig necesita: JwtAuthenticationFilter (cargado como Filter) +
     // AuthenticationProvider
     // JwtAuthenticationFilter necesita: JwtUtil + UserDetailsService
@@ -53,11 +56,10 @@ public class IncidenteControllerTest {
     @MockitoBean
     private UserDetailsService userDetailsService;
 
-    // ────────────── Tests GET /api/v1/incidentes ──────────────
+    // Tests GET /api/v1/incidentes
 
     @Test
     @DisplayName("GET /incidentes con rol OPERADOR → 200 OK + JSON")
-    @WithMockUser(roles = "OPERADOR")
     public void testObtenerIncidentes_ConRolOperador_Retorna200() throws Exception {
         IncidenteResponseDTO dto = new IncidenteResponseDTO();
         dto.setId("abc123");
@@ -68,6 +70,7 @@ public class IncidenteControllerTest {
         when(incidenteService.obtenerTodos()).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/api/v1/incidentes")
+                .with(user("test").roles("OPERADOR"))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -77,11 +80,11 @@ public class IncidenteControllerTest {
 
     @Test
     @DisplayName("GET /incidentes con rol ADMINISTRADOR → 200 OK")
-    @WithMockUser(roles = "ADMINISTRADOR")
     public void testObtenerIncidentes_ConRolAdmin_Retorna200() throws Exception {
         when(incidenteService.obtenerTodos()).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/api/v1/incidentes"))
+        mockMvc.perform(get("/api/v1/incidentes")
+                .with(user("admin").roles("ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
@@ -95,27 +98,27 @@ public class IncidenteControllerTest {
 
     @Test
     @DisplayName("GET /incidentes con rol CIUDADANO → 403 Forbidden")
-    @WithMockUser(roles = "CIUDADANO")
     public void testObtenerIncidentes_ConRolCiudadano_Retorna403() throws Exception {
-        mockMvc.perform(get("/api/v1/incidentes"))
+        mockMvc.perform(get("/api/v1/incidentes")
+                .with(user("ciudadano").roles("CIUDADANO")))
                 .andExpect(status().isForbidden());
     }
 
-    // ────────────── Tests POST /api/v1/incidentes ──────────────
+    // Tests POST /api/v1/incidentes
 
     @Test
     @DisplayName("POST /incidentes sin datos con rol ADMINISTRADOR → 400 Bad Request")
-    @WithMockUser(roles = "ADMINISTRADOR")
     public void testCrearIncidente_SinDatos_Retorna400BadRequest() throws Exception {
-        mockMvc.perform(multipart("/api/v1/incidentes"))
+        mockMvc.perform(multipart("/api/v1/incidentes")
+                .with(user("admin").roles("ADMINISTRADOR")))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("POST /incidentes con rol SUPERVISOR → 403 Forbidden")
-    @WithMockUser(roles = "SUPERVISOR")
     public void testCrearIncidente_ConRolSupervisor_Retorna403() throws Exception {
-        mockMvc.perform(multipart("/api/v1/incidentes"))
+        mockMvc.perform(multipart("/api/v1/incidentes")
+                .with(user("supervisor").roles("SUPERVISOR")))
                 .andExpect(status().isForbidden());
     }
 }

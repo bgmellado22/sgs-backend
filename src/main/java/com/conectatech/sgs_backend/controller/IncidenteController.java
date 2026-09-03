@@ -24,6 +24,7 @@ public class IncidenteController {
 
     @GetMapping
     public ResponseEntity<List<IncidenteResponseDTO>> obtenerTodos() {
+        System.out.println("TEST GET CALLED");
         return ResponseEntity.ok(incidenteService.obtenerTodos());
     }
 
