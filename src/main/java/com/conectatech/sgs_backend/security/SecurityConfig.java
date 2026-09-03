@@ -56,13 +56,17 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/reportes/**").hasRole("ADMINISTRADOR")
 
                                                 // Módulo de Incidentes
-                                                .requestMatchers(HttpMethod.POST, "/api/incidentes/**")
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/incidentes",
+                                                                "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "CIUDADANO")
-                                                .requestMatchers(HttpMethod.PATCH, "/api/incidentes/**")
+                                                .requestMatchers(HttpMethod.PATCH, "/api/v1/incidentes",
+                                                                "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                                                .requestMatchers(HttpMethod.DELETE, "/api/incidentes/**")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/incidentes",
+                                                                "/api/v1/incidentes/**")
                                                 .hasRole("ADMINISTRADOR")
-                                                .requestMatchers(HttpMethod.GET, "/api/incidentes/**")
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/incidentes",
+                                                                "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "SUPERVISOR")
 
                                                 // Cualquier otra ruta exige token válido
