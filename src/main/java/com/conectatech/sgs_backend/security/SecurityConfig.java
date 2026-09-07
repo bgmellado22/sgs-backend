@@ -32,26 +32,26 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .authorizeHttpRequests(auth -> auth
                                                 // Endpoint Sudo (Requiere autenticación previa)
-                                                .requestMatchers("/api/auth/sudo").authenticated()
+                                                .requestMatchers("/api/v1/auth/sudo").authenticated()
 
                                                 // Rutas públicas: Autenticación, Swagger y ruta interna de errores de
                                                 // Spring
                                                 .requestMatchers(
-                                                                "/api/auth/login",
-                                                                "/api/auth/register",
-                                                                "/api/auth/**",
-                                                                "/api/health",
+                                                                "/api/v1/auth/login",
+                                                                "/api/v1/auth/register",
+                                                                "/api/v1/auth/**",
+                                                                "/api/v1/health",
                                                                 "/error",
                                                                 "/v3/api-docs/**",
                                                                 "/scalar.html")
                                                 .permitAll()
 
                                                 // Módulo de Administración
-                                                .requestMatchers("/api/usuarios/**", "/api/catalogos/**")
+                                                .requestMatchers("/api/v1/usuarios/**", "/api/v1/catalogos/**")
                                                 .hasRole("ADMINISTRADOR")
 
                                                 // Módulo de Reportes
-                                                .requestMatchers("/api/reportes/**").hasRole("ADMINISTRADOR")
+                                                .requestMatchers("/api/v1/reportes/**").hasRole("ADMINISTRADOR")
 
                                                 // Módulo de Incidentes
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/incidentes",
