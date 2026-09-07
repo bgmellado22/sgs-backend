@@ -35,6 +35,11 @@ Se incluye un Middleware propio que intercepta y audita los tiempos de respuesta
 
 ---
 
+## Prueba Inmediata (Servidor desplegado en Render)
+
+### Visitar el siguiente enlace:
+`https://sgs-backend-lcof.onrender.com/scalar.html`
+
 ## Instalación y Ejecución Local
 
 ### 1. Clonar el repositorio (Rama: rama-web2)
