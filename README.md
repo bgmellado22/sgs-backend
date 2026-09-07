@@ -36,6 +36,7 @@ Se incluye un Middleware propio que intercepta y audita los tiempos de respuesta
 ---
 
 ## Prueba Inmediata (Servidor desplegado en Render)
+Nota: Puede tardar 2 minutos aprox. en cargar debido al "Cold Start" del plan gratuito de Render.
 
 ### Visitar el siguiente enlace:
 `https://sgs-backend-lcof.onrender.com/scalar.html`
