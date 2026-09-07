@@ -40,13 +40,6 @@ public class IncidenteControllerTest {
     @MockitoBean
     private IncidenteService incidenteService;
 
-    // Dependencias de la cadena de seguridad
-    // SecurityConfig necesita: JwtAuthenticationFilter (cargado como Filter) +
-    // AuthenticationProvider
-    // JwtAuthenticationFilter necesita: JwtUtil + UserDetailsService
-    // Al mockearlas, el filtro real se instancia pero al no recibir JWT simplemente
-    // pasa de largo,
-    // dejando que @WithMockUser establezca el SecurityContext correctamente.
     @MockitoBean
     private JwtUtil jwtUtil;
 

@@ -48,8 +48,8 @@ dependencies {
 	implementation 'io.mongock:mongock-springboot:5.4.4'
 	implementation 'io.mongock:mongodb-springdata-v4-driver:5.4.4'
 
-	// Swagger
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+	// Scalar
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.7.0'
 }
 
 tasks.named('test') {

@@ -43,9 +43,7 @@ public class SecurityConfig {
                                                                 "/api/health",
                                                                 "/error",
                                                                 "/v3/api-docs/**",
-                                                                "/swagger-ui/**",
-                                                                "/swagger/**",
-                                                                "/swagger-ui.html")
+                                                                "/scalar.html")
                                                 .permitAll()
 
                                                 // Módulo de Administración
