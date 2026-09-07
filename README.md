@@ -59,7 +59,7 @@ Para levantar el servidor web y ejecutar automáticamente las migraciones de Mon
 
 ## Documentación Técnica y Pruebas
 
-* **Contrato OpenAPI (Swagger):** Una vez que el servidor esté corriendo, la documentación interactiva de los endpoints versionados estará disponible de forma pública en: `http://localhost:8080/swagger`
+* **Contrato OpenAPI (Scalar):** Una vez que el servidor esté corriendo, la documentación interactiva de los endpoints versionados estará disponible de forma pública en: `http://localhost:8080/scalar.html`
 * **Suite de Pruebas de Integración:** El proyecto incluye pruebas automatizadas para validar rutas, códigos de estado HTTP y compatibilidad de JSON. Se ejecutan con:
 ```bash
 ./gradlew test
