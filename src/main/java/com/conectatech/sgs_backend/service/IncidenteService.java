@@ -67,6 +67,12 @@ public class IncidenteService {
         dto.setEstado(incidente.getEstado());
         dto.setFechaCreacion(incidente.getFechaCreacion());
         dto.setOrigen(incidente.getOrigen());
+        // Extraer coordenadas del geojsonpoint de mongodb
+        if (incidente.getLocation() != null) {
+            dto.setLongitud(incidente.getLocation().getX());
+            dto.setLatitud(incidente.getLocation().getY());
+        }
+        dto.setDireccionTexto(incidente.getDireccionTexto());
         return dto;
     }
 
@@ -119,3 +125,4 @@ public class IncidenteService {
         incidenteRepository.save(incidenteExistente);
     }
 }
+

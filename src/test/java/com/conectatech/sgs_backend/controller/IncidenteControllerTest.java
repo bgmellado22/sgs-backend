@@ -108,10 +108,10 @@ public class IncidenteControllerTest {
     }
 
     @Test
-    @DisplayName("POST /incidentes con rol SUPERVISOR → 403 Forbidden")
-    public void testCrearIncidente_ConRolSupervisor_Retorna403() throws Exception {
+    @DisplayName("POST /incidentes con rol INSPECTOR → 403 Forbidden")
+    public void testCrearIncidente_ConRolInspector_Retorna403() throws Exception {
         mockMvc.perform(multipart("/api/v1/incidentes")
-                .with(user("supervisor").roles("SUPERVISOR")))
+                .with(user("inspector").roles("INSPECTOR")))
                 .andExpect(status().isForbidden());
     }
 }

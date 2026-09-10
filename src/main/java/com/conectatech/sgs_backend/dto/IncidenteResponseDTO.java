@@ -14,4 +14,9 @@ public class IncidenteResponseDTO {
     private String estado;
     private LocalDateTime fechaCreacion;
     private String origen;
+    private Double latitud;
+    private Double longitud;
+    private String direccionTexto;
+
 }
+

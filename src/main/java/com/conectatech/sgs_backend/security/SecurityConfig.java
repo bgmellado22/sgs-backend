@@ -65,7 +65,7 @@ public class SecurityConfig {
                                                 .hasRole("ADMINISTRADOR")
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "SUPERVISOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
 
                                                 // Cualquier otra ruta exige token válido
                                                 .anyRequest().authenticated())
