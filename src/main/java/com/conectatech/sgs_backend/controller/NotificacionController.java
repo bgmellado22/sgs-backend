@@ -39,6 +39,14 @@ public class NotificacionController {
         return ResponseEntity.noContent().build();
     }
 
+    // Marcar todas las notificaciones como leídas
+    @PatchMapping("/leidas")
+    public ResponseEntity<Void> marcarTodasComoLeidas(
+            @AuthenticationPrincipal Usuario usuarioAuth) {
+        notificacionService.marcarTodasComoLeidas(usuarioAuth.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     // Endpoint de prueba
     @PostMapping
     public ResponseEntity<Notificacion> crearNotificacionPrueba(@RequestBody Notificacion notificacion) {

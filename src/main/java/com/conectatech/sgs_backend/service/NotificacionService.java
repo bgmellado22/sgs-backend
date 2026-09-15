@@ -36,4 +36,12 @@ public class NotificacionService {
             notificacionRepository.save(notificacion);
         });
     }
+
+    // Marcar todas las notificaciones no leídas de un usuario como leídas
+    public void marcarTodasComoLeidas(String usuarioDestinoId) {
+        List<Notificacion> noLeidas = notificacionRepository
+                .findByUsuarioDestinoIdAndEstadoOrderByFechaCreacionDesc(usuarioDestinoId, EstadoNotificacion.NO_LEIDA);
+        noLeidas.forEach(n -> n.setEstado(EstadoNotificacion.LEIDA));
+        notificacionRepository.saveAll(noLeidas);
+    }
 }
