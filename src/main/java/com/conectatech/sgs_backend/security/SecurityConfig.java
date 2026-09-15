@@ -67,6 +67,10 @@ public class SecurityConfig {
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
 
+                                                // Módulo de Notificaciones
+                                                .requestMatchers("/api/v1/notificaciones/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+
                                                 // Cualquier otra ruta exige token válido
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
