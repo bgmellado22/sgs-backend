@@ -43,7 +43,8 @@ public class SecurityConfig {
                                                                 "/api/v1/health",
                                                                 "/error",
                                                                 "/v3/api-docs/**",
-                                                                "/scalar.html")
+                                                                "/scalar.html",
+                                                                "/ws-notificaciones/**")
                                                 .permitAll()
 
                                                 // Módulo de Administración

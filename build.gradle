@@ -38,17 +38,18 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-	
+
 	// Librería para envío de correos de recuperación
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
-	// DEPENDENCIAS PARA PROGRAMACIÓN WEB II
+	// Librería para WebSockets
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-	// Migraciones para MongoDB
+	// Librería para la gestión de migraciones de MongoDB
 	implementation 'io.mongock:mongock-springboot:5.4.4'
 	implementation 'io.mongock:mongodb-springdata-v4-driver:5.4.4'
 
-	// Scalar
+	// Librería para Scalar
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.7.0'
 }
 
