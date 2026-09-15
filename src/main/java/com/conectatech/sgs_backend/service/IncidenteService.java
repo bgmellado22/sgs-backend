@@ -3,8 +3,10 @@ package com.conectatech.sgs_backend.service;
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
 import com.conectatech.sgs_backend.model.Incidente;
+import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
+import com.conectatech.sgs_backend.model.enums.TipoNotificacion;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class IncidenteService {
     private final IncidenteRepository incidenteRepository;
+    private final NotificacionWebSocketService websocketService;
 
     // Repositorio de bitácora
     private final BitacoraProcedimientoRepository bitacoraRepository;
@@ -106,6 +109,16 @@ public class IncidenteService {
 
         bitacoraRepository.save(registroAuditoria);
 
+        // Disparar notificación por websocket antes de retornar el DTO
+        Notificacion notificacionSocket = Notificacion.builder()
+                .titulo("Actualización de Incidente")
+                .mensaje("El incidente " + actualizado.getCodigoCorrelativo() + " cambió a estado: " + nuevoEstado)
+                .tipo(TipoNotificacion.INFORMATIVO)
+                .referenciaId(actualizado.getId())
+                .usuarioDestinoId("OPERADOR_CENTRAL")
+                .build();
+
+        websocketService.despacharNotificacionPrivada(notificacionSocket);
         return mapToDTO(actualizado);
     }
 
@@ -125,4 +138,3 @@ public class IncidenteService {
         incidenteRepository.save(incidenteExistente);
     }
 }
-
