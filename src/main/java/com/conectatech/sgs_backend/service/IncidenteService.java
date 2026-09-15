@@ -7,6 +7,7 @@ import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.model.enums.TipoNotificacion;
+import com.conectatech.sgs_backend.service.NotificacionWebSocketService;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,6 @@ import java.util.stream.Collectors;
 public class IncidenteService {
     private final IncidenteRepository incidenteRepository;
     private final NotificacionWebSocketService websocketService;
-
     // Repositorio de bitácora
     private final BitacoraProcedimientoRepository bitacoraRepository;
 
@@ -109,16 +109,18 @@ public class IncidenteService {
 
         bitacoraRepository.save(registroAuditoria);
 
-        // Disparar notificación por websocket antes de retornar el DTO
-        Notificacion notificacionSocket = Notificacion.builder()
-                .titulo("Actualización de Incidente")
-                .mensaje("El incidente " + actualizado.getCodigoCorrelativo() + " cambió a estado: " + nuevoEstado)
+        // Gatillo global de websocket para notificar a todos los usuarios
+        Notificacion alertaGlobal = Notificacion.builder()
+                .titulo("Cambio de Estado")
+                .mensaje("El operador " + actor.getNombreCompleto() + " cambió el incidente "
+                        + actualizado.getCodigoCorrelativo() + " a: " + nuevoEstado)
                 .tipo(TipoNotificacion.INFORMATIVO)
                 .referenciaId(actualizado.getId())
-                .usuarioDestinoId("OPERADOR_CENTRAL")
+                .usuarioDestinoId("GLOBAL")
                 .build();
 
-        websocketService.despacharNotificacionPrivada(notificacionSocket);
+        websocketService.despacharAlertaGlobal(alertaGlobal);
+
         return mapToDTO(actualizado);
     }
 
