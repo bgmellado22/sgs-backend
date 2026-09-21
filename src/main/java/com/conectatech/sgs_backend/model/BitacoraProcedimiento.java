@@ -29,9 +29,10 @@ public class BitacoraProcedimiento {
     private String nombreActor;
     private String rolActor;
 
-    // Trazabilidad del cambio de estado
-    private String estadoAnterior;
-    private String estadoNuevo;
+    // Trazabilidad
+    private String campoModificado; // Estado, Prioridad, Origen, Categoría
+    private String valorAnterior;
+    private String valorNuevo;
 
     // Marca de tiempo inalterable
     @Builder.Default

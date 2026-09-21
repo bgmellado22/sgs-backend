@@ -6,6 +6,9 @@ import java.util.List;
 
 public interface BitacoraProcedimientoRepository extends MongoRepository<BitacoraProcedimiento, String> {
 
-    // Busca todo el historial de un incidente y lo ordena por fecha descendente
+    // Ver detalle de un incidente en específico
     List<BitacoraProcedimiento> findByIncidenteIdOrderByFechaModificacionDesc(String incidenteId);
+
+    // Vista global de la bitácora
+    List<BitacoraProcedimiento> findAllByOrderByFechaModificacionDesc();
 }

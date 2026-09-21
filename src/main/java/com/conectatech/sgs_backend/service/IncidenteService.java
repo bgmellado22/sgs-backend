@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -79,6 +80,28 @@ public class IncidenteService {
         return dto;
     }
 
+    // Método para auditar de forma dinámica
+    private void registrarAuditoria(String incidenteId, Usuario actor, String campo, String valorAnt, String valorNue,
+            String comentario) {
+        // Evitar generar registros basura si los valores son idénticos
+        if (Objects.equals(valorAnt, valorNue))
+            return;
+
+        BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                .incidenteId(incidenteId)
+                .usuarioId(actor.getId())
+                .nombreActor(actor.getNombreCompleto())
+                .rolActor(actor.getRol().name())
+                .campoModificado(campo)
+                .valorAnterior(valorAnt)
+                .valorNuevo(valorNue)
+                .comentario(comentario)
+                .fechaModificacion(LocalDateTime.now())
+                .build();
+
+        bitacoraRepository.save(registro);
+    }
+
     // Método para actualizar el estado de un incidente con auditoría
     public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado) {
         Incidente incidenteExistente = incidenteRepository.findById(id)
@@ -96,18 +119,9 @@ public class IncidenteService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario actor = (Usuario) auth.getPrincipal();
 
-        BitacoraProcedimiento registroAuditoria = BitacoraProcedimiento.builder()
-                .incidenteId(actualizado.getId())
-                .usuarioId(actor.getId())
-                .nombreActor(actor.getNombreCompleto())
-                .rolActor(actor.getRol().name())
-                .estadoAnterior(estadoAnterior)
-                .estadoNuevo(nuevoEstado)
-                .fechaModificacion(LocalDateTime.now())
-                .comentario("Actualización de estado desde panel operativo")
-                .build();
-
-        bitacoraRepository.save(registroAuditoria);
+        // Llamar al método de auditoría
+        registrarAuditoria(actualizado.getId(), actor, "Estado", estadoAnterior, nuevoEstado,
+                "Actualización de estado desde panel operativo");
 
         // Gatillo global de websocket para notificar a todos los usuarios
         Notificacion alertaGlobal = Notificacion.builder()
@@ -124,9 +138,53 @@ public class IncidenteService {
         return mapToDTO(actualizado);
     }
 
+    // Método para edición completa de un incidente con auditoría
+    public IncidenteResponseDTO editarIncidente(String id, IncidenteRequestDTO dto) {
+        Incidente incidente = incidenteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Error: Incidente no encontrado con el ID: " + id));
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario actor = (Usuario) auth.getPrincipal();
+
+        // Auditar y Actualizar Prioridad
+        if (dto.getPrioridad() != null && !dto.getPrioridad().equals(incidente.getPrioridad())) {
+            registrarAuditoria(incidente.getId(), actor, "Prioridad", incidente.getPrioridad(), dto.getPrioridad(),
+                    "Edición general");
+            incidente.setPrioridad(dto.getPrioridad());
+        }
+
+        // Auditar y Actualizar Origen
+        if (dto.getOrigen() != null && !dto.getOrigen().equals(incidente.getOrigen())) {
+            registrarAuditoria(incidente.getId(), actor, "Origen", incidente.getOrigen(), dto.getOrigen(),
+                    "Edición general");
+            incidente.setOrigen(dto.getOrigen());
+        }
+
+        // Auditar y Actualizar Categoría
+        if (dto.getCategoria() != null && !dto.getCategoria().equals(incidente.getCategoria())) {
+            registrarAuditoria(incidente.getId(), actor, "Categoría", incidente.getCategoria(), dto.getCategoria(),
+                    "Edición general");
+            incidente.setCategoria(dto.getCategoria());
+        }
+
+        // Auditar y Actualizar Tipo
+        if (dto.getTipo() != null && !dto.getTipo().equals(incidente.getTipo())) {
+            registrarAuditoria(incidente.getId(), actor, "Tipo", incidente.getTipo(), dto.getTipo(), "Edición general");
+            incidente.setTipo(dto.getTipo());
+        }
+
+        Incidente actualizado = incidenteRepository.save(incidente);
+        return mapToDTO(actualizado);
+    }
+
     // Obtener historial de cambios de un incidente
     public List<BitacoraProcedimiento> obtenerHistorial(String incidenteId) {
         return bitacoraRepository.findByIncidenteIdOrderByFechaModificacionDesc(incidenteId);
+    }
+
+    // Obtener todo el historial
+    public List<BitacoraProcedimiento> obtenerHistorialGlobal() {
+        return bitacoraRepository.findAllByOrderByFechaModificacionDesc();
     }
 
     // Método para eliminar un incidente

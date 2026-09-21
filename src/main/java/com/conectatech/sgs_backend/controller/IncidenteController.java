@@ -7,12 +7,13 @@ import com.conectatech.sgs_backend.service.IncidenteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/incidentes")
@@ -22,44 +23,60 @@ public class IncidenteController {
 
     private final IncidenteService incidenteService;
 
+    // Lectura
     @GetMapping
     public ResponseEntity<List<IncidenteResponseDTO>> obtenerTodos() {
-        System.out.println("TEST GET CALLED");
         return ResponseEntity.ok(incidenteService.obtenerTodos());
     }
 
-    @GetMapping("/{id}/bitacora")
-    public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacora(@PathVariable String id) {
-        return ResponseEntity.ok(incidenteService.obtenerHistorial(id));
-    }
-
+    // Creación
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<IncidenteResponseDTO> crearIncidente(
-            @Valid @RequestPart("incidente") IncidenteRequestDTO incidenteDTO,
+            @RequestPart("incidente") @Valid IncidenteRequestDTO incidenteDTO,
             @RequestPart(value = "evidencia", required = false) MultipartFile foto) {
 
-        IncidenteResponseDTO nuevoIncidente = incidenteService.crearIncidente(incidenteDTO);
-
-        if (foto != null && !foto.isEmpty()) {
-            System.out.println("Foto recibida. Nombre: " + foto.getOriginalFilename());
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(nuevoIncidente);
+        IncidenteResponseDTO creado = incidenteService.crearIncidente(incidenteDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
+    // Actualización Rápida de Estado
     @PatchMapping("/{id}/estado")
     public ResponseEntity<IncidenteResponseDTO> actualizarEstado(
             @PathVariable("id") String id,
-            @RequestBody java.util.Map<String, String> body) {
-        String nuevoEstado = body.get("estado");
+            @RequestBody Map<String, String> request) {
 
-        IncidenteResponseDTO response = incidenteService.actualizarEstado(id, nuevoEstado);
-        return ResponseEntity.ok(response);
+        String nuevoEstado = request.get("estado");
+        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, nuevoEstado);
+        return ResponseEntity.ok(actualizado);
     }
 
+    // Edición
+    @PutMapping("/{id}")
+    public ResponseEntity<IncidenteResponseDTO> editarIncidente(
+            @PathVariable("id") String id,
+            @Valid @RequestBody IncidenteRequestDTO dto) {
+
+        IncidenteResponseDTO editado = incidenteService.editarIncidente(id, dto);
+        return ResponseEntity.ok(editado);
+    }
+
+    // Borrado Lógico
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarIncidente(@PathVariable("id") String id) {
         incidenteService.eliminarIncidente(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Historial de UN solo incidente
+    @GetMapping("/{id}/bitacora")
+    public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacora(
+            @PathVariable("id") String id) {
+        return ResponseEntity.ok(incidenteService.obtenerHistorial(id));
+    }
+
+    // Historial Global
+    @GetMapping("/bitacora/global")
+    public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacoraGlobal() {
+        return ResponseEntity.ok(incidenteService.obtenerHistorialGlobal());
     }
 }
