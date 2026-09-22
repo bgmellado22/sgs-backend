@@ -5,13 +5,17 @@ import com.conectatech.sgs_backend.dto.auth.LoginRequest;
 import com.conectatech.sgs_backend.dto.auth.RegisterRequest;
 import com.conectatech.sgs_backend.exception.CuentaBloqueadaException;
 import com.conectatech.sgs_backend.exception.CredencialesIncorrectasException;
+import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
+import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import com.conectatech.sgs_backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +32,7 @@ public class AuthService {
         private final PasswordEncoder passwordEncoder;
         private final JwtUtil jwtUtil;
         private final AuthenticationManager authenticationManager;
+        private final BitacoraProcedimientoRepository bitacoraRepository;
 
         public AuthResponse register(RegisterRequest request) {
                 var user = Usuario.builder()
@@ -41,6 +46,39 @@ public class AuthService {
                                 .build();
 
                 usuarioRepository.save(user);
+
+                // Registro en bitácora
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                String actorId = "SISTEMA";
+                String nombreActor = "Auto-registro";
+                String rolActor = "SISTEMA";
+                String comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por auto-registro";
+
+                if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
+                        try {
+                                Usuario actorAuth = (Usuario) auth.getPrincipal();
+                                actorId = actorAuth.getId();
+                                nombreActor = actorAuth.getNombreCompleto();
+                                rolActor = actorAuth.getRol().name();
+                                comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por " + nombreActor;
+                        } catch (Exception e) {
+                                // Fallback si el principal no es del tipo Usuario
+                        }
+                }
+
+                BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                                .incidenteId(null)
+                                .usuarioId(actorId)
+                                .nombreActor(nombreActor)
+                                .rolActor(rolActor)
+                                .campoModificado("Registro Usuario")
+                                .valorAnterior(null)
+                                .valorNuevo("Activo")
+                                .comentario(comentario)
+                                .fechaModificacion(LocalDateTime.now())
+                                .build();
+
+                bitacoraRepository.save(registro);
 
                 var jwtToken = jwtUtil.generateToken(user);
                 return AuthResponse.builder()
