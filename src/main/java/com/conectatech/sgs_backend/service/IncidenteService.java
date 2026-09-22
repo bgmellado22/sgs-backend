@@ -48,6 +48,45 @@ public class IncidenteService {
 
         Incidente guardado = incidenteRepository.save(incidente);
 
+        // Obtener actor autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario actor = (Usuario) auth.getPrincipal();
+
+        // Registro en bitácora con diferenciación por rol
+        String etiquetaRol = switch (actor.getRol()) {
+            case CIUDADANO -> "Ciudadano";
+            case OPERADOR -> "Operador Central";
+            case INSPECTOR -> "Inspector en Terreno";
+            case ADMINISTRADOR -> "Administrador";
+        };
+
+        String mensajeNotificacion;
+        String comentarioBitacora;
+
+        if (actor.getRol() == com.conectatech.sgs_backend.model.enums.RolUsuario.CIUDADANO) {
+            mensajeNotificacion = etiquetaRol + " " + actor.getNombreCompleto()
+                    + " ha ingresado una denuncia: " + guardado.getCodigoCorrelativo();
+            comentarioBitacora = "Denuncia ingresada por ciudadano " + actor.getNombreCompleto();
+        } else {
+            mensajeNotificacion = etiquetaRol + " " + actor.getNombreCompleto()
+                    + " ha registrado una nueva denuncia: " + guardado.getCodigoCorrelativo();
+            comentarioBitacora = "Denuncia registrada por " + etiquetaRol.toLowerCase() + " " + actor.getNombreCompleto();
+        }
+
+        registrarAuditoria(guardado.getId(), actor, "Creación",
+                null, "Pendiente", comentarioBitacora);
+
+        // Notificación global por WebSocket
+        Notificacion alertaCreacion = Notificacion.builder()
+                .titulo("Nueva Denuncia")
+                .mensaje(mensajeNotificacion)
+                .tipo(TipoNotificacion.INFORMATIVO)
+                .referenciaId(guardado.getId())
+                .usuarioDestinoId("GLOBAL")
+                .build();
+
+        websocketService.despacharAlertaGlobal(alertaCreacion);
+
         return mapToDTO(guardado);
     }
 
@@ -174,6 +213,17 @@ public class IncidenteService {
         }
 
         Incidente actualizado = incidenteRepository.save(incidente);
+
+        // Despacho de alerta global
+        Notificacion alertaEdicion = Notificacion.builder()
+        .titulo("Incidente Modificado")
+        .mensaje("El operador " + actor.getNombreCompleto() + " ha modificado los parámetros del incidente " + actualizado.getCodigoCorrelativo())
+        .tipo(TipoNotificacion.ALERTA)
+        .referenciaId(actualizado.getId())
+        .usuarioDestinoId("GLOBAL")
+        .build();
+        websocketService.despacharAlertaGlobal(alertaEdicion);
+
         return mapToDTO(actualizado);
     }
 
@@ -196,5 +246,23 @@ public class IncidenteService {
         incidenteExistente.setActivo(false);
 
         incidenteRepository.save(incidenteExistente);
+
+        // Registro en bitácora
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario actor = (Usuario) auth.getPrincipal();
+
+        registrarAuditoria(incidenteExistente.getId(), actor, "Eliminación",
+                "Activo", "Eliminado",
+                "Denuncia " + incidenteExistente.getCodigoCorrelativo() + " eliminada por " + actor.getNombreCompleto());
+
+        // Despacho de alerta global
+        Notificacion alertaBorrado = Notificacion.builder()
+        .titulo("Incidente Eliminado")
+        .mensaje("El registro " + incidenteExistente.getCodigoCorrelativo() + " fue dado de baja por " + actor.getNombreCompleto())
+        .tipo(TipoNotificacion.ALERTA)
+        .referenciaId(incidenteExistente.getId())
+        .usuarioDestinoId("GLOBAL")
+        .build();
+        websocketService.despacharAlertaGlobal(alertaBorrado);
     }
 }

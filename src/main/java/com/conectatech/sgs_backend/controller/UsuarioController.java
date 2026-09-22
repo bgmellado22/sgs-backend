@@ -5,6 +5,7 @@ import com.conectatech.sgs_backend.dto.UsuarioUpdateDTO;
 import com.conectatech.sgs_backend.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,13 @@ import java.util.List;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+
+    @GetMapping("/inspectores")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR', 'INSPECTOR')")
+    public ResponseEntity<List<UsuarioResponseDTO>> listarInspectores() {
+        List<UsuarioResponseDTO> inspectores = usuarioService.obtenerInspectoresActivos();
+        return ResponseEntity.ok(inspectores);
+    }
 
     @GetMapping
     public ResponseEntity<List<UsuarioResponseDTO>> obtenerUsuarios() {
