@@ -6,12 +6,15 @@ import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.service.IncidenteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -78,5 +81,20 @@ public class IncidenteController {
     @GetMapping("/bitacora/global")
     public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacoraGlobal() {
         return ResponseEntity.ok(incidenteService.obtenerHistorialGlobal());
+    }
+
+    // Buscar
+    @GetMapping("/buscar")
+    public ResponseEntity<List<IncidenteResponseDTO>> buscarIncidentes(
+            @RequestParam(required = false) String textoBusqueda,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String prioridad,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
+        List<IncidenteResponseDTO> resultados = incidenteService.buscarIncidentesAvanzado(
+                textoBusqueda, categoria, tipo, estado, prioridad, fechaInicio, fechaFin);
+        return ResponseEntity.ok(resultados);
     }
 }

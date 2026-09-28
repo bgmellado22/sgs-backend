@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface IncidenteRepository extends MongoRepository<Incidente, String> {
+public interface IncidenteRepository extends MongoRepository<Incidente, String>, IncidenteRepositoryCustom {
     List<Incidente> findByEstado(String estado);
 
     List<Incidente> findByCategoria(String categoria);

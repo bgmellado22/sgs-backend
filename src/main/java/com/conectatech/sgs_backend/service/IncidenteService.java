@@ -70,7 +70,8 @@ public class IncidenteService {
         } else {
             mensajeNotificacion = etiquetaRol + " " + actor.getNombreCompleto()
                     + " ha registrado una nueva denuncia: " + guardado.getCodigoCorrelativo();
-            comentarioBitacora = "Denuncia registrada por " + etiquetaRol.toLowerCase() + " " + actor.getNombreCompleto();
+            comentarioBitacora = "Denuncia registrada por " + etiquetaRol.toLowerCase() + " "
+                    + actor.getNombreCompleto();
         }
 
         registrarAuditoria(guardado.getId(), actor, "Creación",
@@ -216,12 +217,13 @@ public class IncidenteService {
 
         // Despacho de alerta global
         Notificacion alertaEdicion = Notificacion.builder()
-        .titulo("Incidente Modificado")
-        .mensaje("El operador " + actor.getNombreCompleto() + " ha modificado los parámetros del incidente " + actualizado.getCodigoCorrelativo())
-        .tipo(TipoNotificacion.ALERTA)
-        .referenciaId(actualizado.getId())
-        .usuarioDestinoId("GLOBAL")
-        .build();
+                .titulo("Incidente Modificado")
+                .mensaje("El operador " + actor.getNombreCompleto() + " ha modificado los parámetros del incidente "
+                        + actualizado.getCodigoCorrelativo())
+                .tipo(TipoNotificacion.ALERTA)
+                .referenciaId(actualizado.getId())
+                .usuarioDestinoId("GLOBAL")
+                .build();
         websocketService.despacharAlertaGlobal(alertaEdicion);
 
         return mapToDTO(actualizado);
@@ -253,16 +255,42 @@ public class IncidenteService {
 
         registrarAuditoria(incidenteExistente.getId(), actor, "Eliminación",
                 "Activo", "Eliminado",
-                "Denuncia " + incidenteExistente.getCodigoCorrelativo() + " eliminada por " + actor.getNombreCompleto());
+                "Denuncia " + incidenteExistente.getCodigoCorrelativo() + " eliminada por "
+                        + actor.getNombreCompleto());
 
         // Despacho de alerta global
         Notificacion alertaBorrado = Notificacion.builder()
-        .titulo("Incidente Eliminado")
-        .mensaje("El registro " + incidenteExistente.getCodigoCorrelativo() + " fue dado de baja por " + actor.getNombreCompleto())
-        .tipo(TipoNotificacion.ALERTA)
-        .referenciaId(incidenteExistente.getId())
-        .usuarioDestinoId("GLOBAL")
-        .build();
+                .titulo("Incidente Eliminado")
+                .mensaje("El registro " + incidenteExistente.getCodigoCorrelativo() + " fue dado de baja por "
+                        + actor.getNombreCompleto())
+                .tipo(TipoNotificacion.ALERTA)
+                .referenciaId(incidenteExistente.getId())
+                .usuarioDestinoId("GLOBAL")
+                .build();
         websocketService.despacharAlertaGlobal(alertaBorrado);
+    }
+
+    // Método para buscar incidentes con filtros avanzados
+    public List<IncidenteResponseDTO> buscarIncidentesAvanzado(
+            String textoBusqueda,
+            String categoria,
+            String tipo,
+            String estado,
+            String prioridad,
+            LocalDateTime fechaInicio,
+            LocalDateTime fechaFin) {
+
+        List<Incidente> resultados = incidenteRepository.buscarConFiltrosAvanzados(
+                textoBusqueda,
+                categoria,
+                tipo,
+                estado,
+                prioridad,
+                fechaInicio,
+                fechaFin);
+
+        return resultados.stream()
+                .map(this::mapToDTO)
+                .collect(java.util.stream.Collectors.toList());
     }
 }
