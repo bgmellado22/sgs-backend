@@ -35,4 +35,22 @@ public class ReporteController {
                 .headers(headers)
                 .body(archivoExcel);
     }
+
+    @GetMapping("/pdf")
+    public ResponseEntity<byte[]> descargarPDF(
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
+        byte[] archivoPdf = reporteService.generarReportePDF(categoria, fechaInicio, fechaFin);
+
+        HttpHeaders headers = new HttpHeaders();
+        // Tipo MIME oficial para PDF
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        // "attachment" fuerza la descarga
+        headers.setContentDispositionFormData("attachment", "Consolidado_SGS.pdf");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(archivoPdf);
+    }
 }
