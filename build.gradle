@@ -51,6 +51,12 @@ dependencies {
 
 	// Librería para Scalar
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.7.0'
+
+	// Librería para Apache POI (exportar Excel)
+	implementation 'org.apache.poi:poi-ooxml:5.2.3'
+
+	// Librería para iText Core (exportar PDF)
+	implementation 'com.itextpdf:itext-core:8.0.2'
 }
 
 tasks.named('test') {
