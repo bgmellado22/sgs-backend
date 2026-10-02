@@ -46,19 +46,22 @@ public class ConfiguracionController {
     }
 
     // ──────────────────────────────────────────────
-    //  CATÁLOGO DE ORIGEN
+    //  CATÁLOGOS (Origen, Prioridad, Categoría)
     // ──────────────────────────────────────────────
 
     /**
-     * POST /api/v1/configuracion/catalogos/origen
-     * Crea un nuevo valor de catálogo de tipo ORIGEN.
+     * POST /api/v1/configuracion/catalogos/{tipo}
+     * Crea un nuevo valor de catálogo del tipo indicado.
+     * Tipos permitidos: origen, prioridad, categoria
      * Seguridad: Solo ADMINISTRADOR.
      * Auditoría: Registro forense automático en bitácora.
      */
-    @PostMapping("/catalogos/origen")
+    @PostMapping("/catalogos/{tipo}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<Catalogo> crearOrigen(@RequestBody Catalogo catalogo) {
+    public ResponseEntity<Catalogo> crearCatalogo(
+            @PathVariable String tipo,
+            @RequestBody Catalogo catalogo) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(configuracionService.crearOrigen(catalogo));
+                .body(configuracionService.crearCatalogo(tipo, catalogo));
     }
 }

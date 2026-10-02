@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,20 @@ public class ConfiguracionService {
     private final ParametroSistemaRepository parametroSistemaRepository;
     private final CatalogoRepository catalogoRepository;
     private final BitacoraProcedimientoRepository bitacoraRepository;
+
+    /**
+     * Tipos de catálogo permitidos para creación dinámica.
+     */
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "PRIORIDAD", "CATEGORIA");
+
+    /**
+     * Etiquetas legibles para el mensaje de auditoría por tipo.
+     */
+    private static final Map<String, String> ETIQUETAS_AUDITORIA = Map.of(
+            "ORIGEN", "Origen de denuncia",
+            "PRIORIDAD", "Prioridad",
+            "CATEGORIA", "Categoría"
+    );
 
     // ──────────────────────────────────────────────
     //  PARÁMETROS DEL SISTEMA (SLAs y otros)
@@ -52,17 +67,33 @@ public class ConfiguracionService {
     }
 
     // ──────────────────────────────────────────────
-    //  CATÁLOGO DE ORIGEN (con auditoría forense)
+    //  CATÁLOGOS (Origen, Prioridad, Categoría)
+    //  con auditoría forense Zero-Trust
     // ──────────────────────────────────────────────
 
     /**
-     * Crea un nuevo valor en el catálogo de tipo ORIGEN.
+     * Crea un nuevo valor en el catálogo del tipo indicado.
      * Gatillo Inalterable: registra automáticamente en la bitácora
      * la identidad del administrador extraída del SecurityContextHolder.
+     *
+     * @param tipo     Tipo de catálogo (ORIGEN, PRIORIDAD, CATEGORIA)
+     * @param catalogo Datos del nuevo catálogo (valor, etiqueta)
+     * @return Catálogo creado
+     * @throws IllegalArgumentException si el tipo no está en la whitelist
      */
-    public Catalogo crearOrigen(Catalogo catalogo) {
-        // Forzar tipo ORIGEN y activar por defecto
-        catalogo.setTipo("ORIGEN");
+    public Catalogo crearCatalogo(String tipo, Catalogo catalogo) {
+        String tipoNormalizado = tipo.toUpperCase();
+
+        // Validación estricta contra whitelist
+        if (!TIPOS_PERMITIDOS.contains(tipoNormalizado)) {
+            throw new IllegalArgumentException(
+                    "Tipo de catálogo no permitido: " + tipo
+                            + ". Valores válidos: " + TIPOS_PERMITIDOS
+            );
+        }
+
+        // Forzar tipo y activar por defecto
+        catalogo.setTipo(tipoNormalizado);
         catalogo.setActivo(true);
 
         Catalogo guardado = catalogoRepository.save(catalogo);
@@ -72,9 +103,11 @@ public class ConfiguracionService {
                 .getAuthentication()
                 .getPrincipal();
 
+        String etiquetaTipo = ETIQUETAS_AUDITORIA.get(tipoNormalizado);
         String mensaje = String.format(
-                "El Administrador %s ha creado el nuevo Origen de denuncia: %s",
+                "El Administrador %s ha creado el nuevo %s: %s",
                 admin.getNombreCompleto(),
+                etiquetaTipo,
                 guardado.getValor()
         );
 
@@ -82,7 +115,7 @@ public class ConfiguracionService {
                 .usuarioId(admin.getId())
                 .nombreActor(admin.getNombreCompleto())
                 .rolActor(admin.getRol().name())
-                .campoModificado("Catálogo Origen")
+                .campoModificado("Catálogo " + etiquetaTipo)
                 .valorAnterior(null)
                 .valorNuevo(guardado.getValor())
                 .comentario(mensaje)
