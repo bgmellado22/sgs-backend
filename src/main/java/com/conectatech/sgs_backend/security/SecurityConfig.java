@@ -58,6 +58,14 @@ public class SecurityConfig {
                                                 // Módulo de Reportes
                                                 .requestMatchers("/api/v1/reportes/**").hasRole("ADMINISTRADOR")
 
+                                                // Módulo de Configuración del Sistema
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/configuracion/**")
+                                                .authenticated()
+                                                .requestMatchers(HttpMethod.PUT, "/api/v1/configuracion/**")
+                                                .hasRole("ADMINISTRADOR")
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/configuracion/**")
+                                                .hasRole("ADMINISTRADOR")
+
                                                 // Módulo de Incidentes
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
