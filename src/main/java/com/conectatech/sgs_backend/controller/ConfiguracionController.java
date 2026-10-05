@@ -45,6 +45,18 @@ public class ConfiguracionController {
         return ResponseEntity.ok(configuracionService.actualizarParametros(parametros));
     }
 
+    /**
+     * DELETE /api/v1/configuracion/parametros/{id}
+     * Elimina un parámetro del sistema.
+     * Seguridad: Solo ADMINISTRADOR.
+     */
+    @DeleteMapping("/parametros/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarParametro(@PathVariable String id) {
+        configuracionService.eliminarParametro(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ──────────────────────────────────────────────
     //  CATÁLOGOS (Origen, Prioridad, Categoría)
     // ──────────────────────────────────────────────
@@ -63,5 +75,30 @@ public class ConfiguracionController {
             @RequestBody Catalogo catalogo) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(configuracionService.crearCatalogo(tipo, catalogo));
+    }
+
+    /**
+     * PUT /api/v1/configuracion/catalogos/{id}
+     * Edita un valor de catálogo existente.
+     * Seguridad: Solo ADMINISTRADOR.
+     */
+    @PutMapping("/catalogos/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Catalogo> editarCatalogo(
+            @PathVariable String id,
+            @RequestBody Catalogo catalogo) {
+        return ResponseEntity.ok(configuracionService.editarCatalogo(id, catalogo));
+    }
+
+    /**
+     * DELETE /api/v1/configuracion/catalogos/{id}
+     * Elimina un valor de catálogo.
+     * Seguridad: Solo ADMINISTRADOR.
+     */
+    @DeleteMapping("/catalogos/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarCatalogo(@PathVariable String id) {
+        configuracionService.eliminarCatalogo(id);
+        return ResponseEntity.noContent().build();
     }
 }

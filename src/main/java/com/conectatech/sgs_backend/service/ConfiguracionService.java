@@ -56,14 +56,81 @@ public class ConfiguracionService {
      * Recibe un mapa clave→valor. Si la clave existe, actualiza; si no, crea el parámetro.
      */
     public List<ParametroSistema> actualizarParametros(Map<String, String> parametros) {
+        Usuario admin = (Usuario) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
         parametros.forEach((clave, valor) -> {
             ParametroSistema param = parametroSistemaRepository.findByClave(clave)
                     .orElse(ParametroSistema.builder().clave(clave).build());
+            
+            String valorAnterior = param.getValor() == null ? "NO EXISTE" : param.getValor();
+            boolean esNuevo = param.getId() == null;
+            
             param.setValor(valor);
             parametroSistemaRepository.save(param);
-            log.info("Parámetro actualizado: {} = {}", clave, valor);
+            
+            String accion = esNuevo ? "CREACIÓN" : "MODIFICACIÓN";
+            String mensaje = String.format(
+                    "El Administrador %s ha realizado una %s en el SLA/Parámetro: %s (Nuevo valor: %s)",
+                    admin.getNombreCompleto(),
+                    accion,
+                    clave,
+                    valor
+            );
+
+            BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                    .usuarioId(admin.getId())
+                    .nombreActor(admin.getNombreCompleto())
+                    .rolActor(admin.getRol().name())
+                    .campoModificado("SLA: " + clave)
+                    .valorAnterior(valorAnterior)
+                    .valorNuevo(valor)
+                    .comentario(mensaje)
+                    .fechaModificacion(LocalDateTime.now())
+                    .build();
+
+            bitacoraRepository.save(registro);
+            log.info("Auditoría forense registrada: {}", mensaje);
         });
         return parametroSistemaRepository.findAll();
+    }
+
+    /**
+     * Elimina un parámetro del sistema por su ID.
+     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     */
+    public void eliminarParametro(String id) {
+        ParametroSistema parametro = parametroSistemaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Parámetro no encontrado con ID: " + id));
+
+        parametroSistemaRepository.delete(parametro);
+
+        // ── Gatillo Inalterable: Registro Forense ──
+        Usuario admin = (Usuario) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        String mensaje = String.format(
+                "El Administrador %s ha eliminado el SLA/Parámetro: %s (Valor anterior: %s)",
+                admin.getNombreCompleto(),
+                parametro.getClave(),
+                parametro.getValor()
+        );
+
+        BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                .usuarioId(admin.getId())
+                .nombreActor(admin.getNombreCompleto())
+                .rolActor(admin.getRol().name())
+                .campoModificado("ELIMINACION DE PARAMETRO SLA")
+                .valorAnterior(parametro.getValor())
+                .valorNuevo("ELIMINADO")
+                .comentario(mensaje)
+                .fechaModificacion(LocalDateTime.now())
+                .build();
+
+        bitacoraRepository.save(registro);
+        log.info("Auditoría forense registrada: {}", mensaje);
     }
 
     // ──────────────────────────────────────────────
@@ -126,5 +193,92 @@ public class ConfiguracionService {
         log.info("Auditoría forense registrada: {}", mensaje);
 
         return guardado;
+    }
+
+    /**
+     * Edita un catálogo existente.
+     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     */
+    public Catalogo editarCatalogo(String id, Catalogo catalogoActualizado) {
+        Catalogo existente = catalogoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
+
+        String valorAnterior = existente.getValor();
+        String etiquetaAnterior = existente.getEtiqueta();
+
+        existente.setValor(catalogoActualizado.getValor());
+        existente.setEtiqueta(catalogoActualizado.getEtiqueta());
+        
+        Catalogo guardado = catalogoRepository.save(existente);
+
+        // ── Gatillo Inalterable: Registro Forense ──
+        Usuario admin = (Usuario) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        String etiquetaTipo = ETIQUETAS_AUDITORIA.getOrDefault(existente.getTipo(), existente.getTipo());
+        String mensaje = String.format(
+                "El Administrador %s ha modificado el %s: %s -> %s (Etiqueta: %s -> %s)",
+                admin.getNombreCompleto(),
+                etiquetaTipo,
+                valorAnterior,
+                guardado.getValor(),
+                etiquetaAnterior,
+                guardado.getEtiqueta()
+        );
+
+        BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                .usuarioId(admin.getId())
+                .nombreActor(admin.getNombreCompleto())
+                .rolActor(admin.getRol().name())
+                .campoModificado("Catálogo " + etiquetaTipo)
+                .valorAnterior(valorAnterior + " (" + etiquetaAnterior + ")")
+                .valorNuevo(guardado.getValor() + " (" + guardado.getEtiqueta() + ")")
+                .comentario(mensaje)
+                .fechaModificacion(LocalDateTime.now())
+                .build();
+
+        bitacoraRepository.save(registro);
+        log.info("Auditoría forense registrada: {}", mensaje);
+
+        return guardado;
+    }
+
+    /**
+     * Elimina un catálogo por su ID.
+     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     */
+    public void eliminarCatalogo(String id) {
+        Catalogo existente = catalogoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
+
+        catalogoRepository.delete(existente);
+
+        // ── Gatillo Inalterable: Registro Forense ──
+        Usuario admin = (Usuario) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        String etiquetaTipo = ETIQUETAS_AUDITORIA.getOrDefault(existente.getTipo(), existente.getTipo());
+        String mensaje = String.format(
+                "El Administrador %s ha eliminado el %s: %s",
+                admin.getNombreCompleto(),
+                etiquetaTipo,
+                existente.getValor()
+        );
+
+        BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                .usuarioId(admin.getId())
+                .nombreActor(admin.getNombreCompleto())
+                .rolActor(admin.getRol().name())
+                .campoModificado("ELIMINACION DE CATALOGO " + etiquetaTipo)
+                .valorAnterior(existente.getValor())
+                .valorNuevo("ELIMINADO")
+                .comentario(mensaje)
+                .fechaModificacion(LocalDateTime.now())
+                .build();
+
+        bitacoraRepository.save(registro);
+        log.info("Auditoría forense registrada: {}", mensaje);
     }
 }
