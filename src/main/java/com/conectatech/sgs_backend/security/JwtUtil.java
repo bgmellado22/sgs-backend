@@ -1,5 +1,7 @@
 package com.conectatech.sgs_backend.security;
 
+import com.conectatech.sgs_backend.model.Usuario;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -39,6 +41,10 @@ public class JwtUtil {
 
         String rol = userDetails.getAuthorities().iterator().next().getAuthority();
         extraClaims.put("rol", rol);
+
+        if (userDetails instanceof Usuario) {
+            extraClaims.put("nombreCompleto", ((Usuario) userDetails).getNombreCompleto());
+        }
 
         return generateToken(extraClaims, userDetails);
     }
