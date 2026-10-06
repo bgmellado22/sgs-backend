@@ -47,4 +47,10 @@ public class UsuarioController {
         UsuarioResponseDTO usuarioActualizado = usuarioService.cambiarEstadoUsuario(id);
         return ResponseEntity.ok(usuarioActualizado);
     }
+
+    @PutMapping("/me")
+    public ResponseEntity<UsuarioResponseDTO> actualizarMiPerfil(@RequestBody com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO updateDTO) {
+        UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarMiPerfil(updateDTO);
+        return ResponseEntity.ok(usuarioActualizado);
+    }
 }

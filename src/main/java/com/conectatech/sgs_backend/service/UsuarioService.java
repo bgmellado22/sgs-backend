@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class UsuarioService {
 
         private final UsuarioRepository usuarioRepository;
         private final BitacoraProcedimientoRepository bitacoraRepository;
+        private final PasswordEncoder passwordEncoder;
 
         // Obtener usuarios
         public List<UsuarioResponseDTO> obtenerTodosLosUsuarios() {
@@ -47,6 +50,36 @@ public class UsuarioService {
                 usuario.setNombreCompleto(dto.getNombreCompleto());
                 usuario.setEmail(dto.getEmail());
                 usuario.setRol(dto.getRol());
+
+                Usuario usuarioActualizado = usuarioRepository.save(usuario);
+
+                return UsuarioResponseDTO.builder()
+                                .id(usuarioActualizado.getId())
+                                .rut(usuarioActualizado.getRut())
+                                .nombreCompleto(usuarioActualizado.getNombreCompleto())
+                                .email(usuarioActualizado.getEmail())
+                                .rol(usuarioActualizado.getRol())
+                                .estado(usuarioActualizado.getEstado())
+                                .build();
+        }
+
+        // Actualizar mi propio perfil
+        public UsuarioResponseDTO actualizarMiPerfil(MiPerfilUpdateDTO dto) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                Usuario actor = (Usuario) auth.getPrincipal();
+
+                Usuario usuario = usuarioRepository.findById(actor.getId())
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + actor.getId()));
+
+                if (dto.getNombreCompleto() != null && !dto.getNombreCompleto().isBlank()) {
+                        usuario.setNombreCompleto(dto.getNombreCompleto());
+                }
+                if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+                        usuario.setEmail(dto.getEmail());
+                }
+                if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+                        usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
+                }
 
                 Usuario usuarioActualizado = usuarioRepository.save(usuario);
 
