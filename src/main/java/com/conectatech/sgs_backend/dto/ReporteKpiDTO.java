@@ -12,4 +12,6 @@ import lombok.NoArgsConstructor;
 public class ReporteKpiDTO {
     private long volumenOperativoTotal;
     private double tasaResolucionEfectiva;
+    private double cumplimientoSla;
+    private double indiceCriticidad;
 }

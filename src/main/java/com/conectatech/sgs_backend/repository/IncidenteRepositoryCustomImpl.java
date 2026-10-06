@@ -79,6 +79,10 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
         // Filtro dinámico de fechas
         if (fechaInicio != null && fechaFin != null) {
             criteria = Criteria.where("fechaCreacion").gte(fechaInicio).lte(fechaFin);
+        } else if (fechaInicio != null) {
+            criteria = Criteria.where("fechaCreacion").gte(fechaInicio);
+        } else if (fechaFin != null) {
+            criteria = Criteria.where("fechaCreacion").lte(fechaFin);
         }
 
         org.springframework.data.mongodb.core.aggregation.AggregationExpression sumExpr = context -> 
@@ -87,24 +91,47 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
                 .append("then", 1)
                 .append("else", 0));
 
+        org.springframework.data.mongodb.core.aggregation.AggregationExpression sumSlaExpr = context -> 
+                new Document("$cond", new Document("if", 
+                        new Document("$and", java.util.Arrays.asList(
+                                new Document("$in", java.util.Arrays.asList("$estado", java.util.Arrays.asList("Resuelto", "Cerrado"))),
+                                new Document("$ne", java.util.Arrays.asList("$tiempo_resolucion_minutos", null)),
+                                new Document("$lte", java.util.Arrays.asList("$tiempo_resolucion_minutos", 2880)) // Meta: 48h (2880 mins)
+                        ))
+                )
+                .append("then", 1)
+                .append("else", 0));
+
+        org.springframework.data.mongodb.core.aggregation.AggregationExpression sumCritExpr = context -> 
+                new Document("$cond", new Document("if", 
+                        new Document("$in", java.util.Arrays.asList("$prioridad", java.util.Arrays.asList("Alta", "Crítica"))))
+                .append("then", 1)
+                .append("else", 0));
+
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(criteria),
                 Aggregation.group()
                         .count().as("volumenOperativoTotal")
-                        .sum(sumExpr).as("casosResueltos"));
+                        .sum(sumExpr).as("casosResueltos")
+                        .sum(sumSlaExpr).as("casosSla")
+                        .sum(sumCritExpr).as("casosCriticos"));
 
         AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "incidentes", Document.class);
         Document resultDoc = results.getUniqueMappedResult();
 
         if (resultDoc == null) {
-            return new ReporteKpiDTO(0L, 0.0);
+            return new ReporteKpiDTO(0L, 0.0, 0.0, 0.0);
         }
 
         long total = resultDoc.getInteger("volumenOperativoTotal", 0);
         long resueltos = resultDoc.getInteger("casosResueltos", 0);
+        long casosSla = resultDoc.getInteger("casosSla", 0);
+        long casosCriticos = resultDoc.getInteger("casosCriticos", 0);
 
         double tasa = (total == 0) ? 0.0 : Math.round(((double) resueltos / total) * 100.0 * 10.0) / 10.0;
+        double cumplimientoSla = (resueltos == 0) ? 0.0 : Math.round(((double) casosSla / resueltos) * 100.0 * 10.0) / 10.0;
+        double indiceCriticidad = (total == 0) ? 0.0 : Math.round(((double) casosCriticos / total) * 100.0 * 10.0) / 10.0;
 
-        return new ReporteKpiDTO(total, tasa);
+        return new ReporteKpiDTO(total, tasa, cumplimientoSla, indiceCriticidad);
     }
 }

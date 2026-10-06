@@ -10,6 +10,7 @@ import com.conectatech.sgs_backend.model.enums.TipoNotificacion;
 import com.conectatech.sgs_backend.service.NotificacionWebSocketService;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
+import com.conectatech.sgs_backend.repository.ParametroSistemaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
@@ -17,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -28,6 +30,7 @@ public class IncidenteService {
         private final NotificacionWebSocketService websocketService;
         // Repositorio de bitácora
         private final BitacoraProcedimientoRepository bitacoraRepository;
+        private final ParametroSistemaRepository parametroRepository;
 
         // Guardar
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto) {
@@ -45,6 +48,8 @@ public class IncidenteService {
                 incidente.setCodigoCorrelativo("INC-" + (int) (Math.random() * 900 + 100));
                 incidente.setEstado("Pendiente");
                 incidente.setFechaCreacion(LocalDateTime.now());
+
+                asignarVencimientoSla(incidente);
 
                 Incidente guardado = incidenteRepository.save(incidente);
 
@@ -110,6 +115,10 @@ public class IncidenteService {
                 dto.setPrioridad(incidente.getPrioridad());
                 dto.setEstado(incidente.getEstado());
                 dto.setFechaCreacion(incidente.getFechaCreacion());
+                dto.setFechaCierre(incidente.getFechaCierre());
+                dto.setTiempoResolucionMinutos(incidente.getTiempoResolucionMinutos());
+                dto.setSlaMinutosObjetivo(incidente.getSlaMinutosObjetivo());
+                dto.setFechaVencimientoSla(incidente.getFechaVencimientoSla());
                 dto.setOrigen(incidente.getOrigen());
                 // Extraer coordenadas del geojsonpoint de mongodb
                 if (incidente.getLocation() != null) {
@@ -157,6 +166,18 @@ public class IncidenteService {
                 }
 
                 incidenteExistente.setEstado(nuevoEstado);
+
+                if ("Resuelto".equals(nuevoEstado) || "Cerrado".equals(nuevoEstado)) {
+                        if (incidenteExistente.getFechaCierre() == null) {
+                                incidenteExistente.setFechaCierre(LocalDateTime.now());
+                                long minutos = ChronoUnit.MINUTES.between(incidenteExistente.getFechaCreacion(), incidenteExistente.getFechaCierre());
+                                incidenteExistente.setTiempoResolucionMinutos(minutos);
+                        }
+                } else {
+                        incidenteExistente.setFechaCierre(null);
+                        incidenteExistente.setTiempoResolucionMinutos(null);
+                }
+
                 Incidente actualizado = incidenteRepository.save(incidenteExistente);
 
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -197,6 +218,9 @@ public class IncidenteService {
                                         incidente.getPrioridad(), dto.getPrioridad(),
                                         "Edición de prioridad por parte de " + actor.getNombreCompleto());
                         incidente.setPrioridad(dto.getPrioridad());
+                        
+                        // Recalcular SLA si cambia la prioridad
+                        asignarVencimientoSla(incidente);
                 }
 
                 // Auditar y Actualizar Origen
@@ -305,5 +329,25 @@ public class IncidenteService {
                 return resultados.stream()
                                 .map(this::mapToDTO)
                                 .collect(java.util.stream.Collectors.toList());
+        }
+
+        private void asignarVencimientoSla(Incidente incidente) {
+                if (incidente.getPrioridad() == null) return;
+                
+                String claveSla = "SLA_" + incidente.getPrioridad().toUpperCase() + "_MINUTOS";
+                parametroRepository.findByClave(claveSla).ifPresent(param -> {
+                        try {
+                                long minutos = Long.parseLong(param.getValor());
+                                incidente.setSlaMinutosObjetivo(minutos);
+                                
+                                LocalDateTime baseTime = incidente.getFechaCreacion() != null 
+                                        ? incidente.getFechaCreacion() 
+                                        : LocalDateTime.now();
+                                        
+                                incidente.setFechaVencimientoSla(baseTime.plusMinutes(minutos));
+                        } catch (NumberFormatException e) {
+                                // Ignorar si el formato es incorrecto
+                        }
+                });
         }
 }

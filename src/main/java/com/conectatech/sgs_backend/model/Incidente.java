@@ -33,6 +33,18 @@ public class Incidente {
     @Field("fecha_creacion")
     private LocalDateTime fechaCreacion;
 
+    @Field("fecha_cierre")
+    private LocalDateTime fechaCierre;
+
+    @Field("tiempo_resolucion_minutos")
+    private Long tiempoResolucionMinutos;
+
+    @Field("sla_minutos_objetivo")
+    private Long slaMinutosObjetivo;
+
+    @Field("fecha_vencimiento_sla")
+    private LocalDateTime fechaVencimientoSla;
+
     @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
     private GeoJsonPoint location;
     private String direccionTexto;

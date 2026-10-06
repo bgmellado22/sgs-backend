@@ -13,4 +13,6 @@ public interface IncidenteRepository extends MongoRepository<Incidente, String>,
     List<Incidente> findByCategoria(String categoria);
 
     List<Incidente> findByActivoTrue();
+
+    List<Incidente> findByEstadoNotIn(List<String> estados);
 }

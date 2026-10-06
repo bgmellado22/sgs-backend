@@ -13,10 +13,12 @@ public class IncidenteResponseDTO {
     private String prioridad;
     private String estado;
     private LocalDateTime fechaCreacion;
+    private LocalDateTime fechaCierre;
+    private Long tiempoResolucionMinutos;
+    private Long slaMinutosObjetivo;
+    private LocalDateTime fechaVencimientoSla;
     private String origen;
     private Double latitud;
     private Double longitud;
     private String direccionTexto;
-
 }
-
