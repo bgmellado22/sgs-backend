@@ -1,5 +1,6 @@
 package com.conectatech.sgs_backend.service;
 
+import com.conectatech.sgs_backend.dto.ReporteKpiDTO;
 import com.conectatech.sgs_backend.model.Incidente;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import lombok.RequiredArgsConstructor;
@@ -143,5 +144,9 @@ public class ReporteService {
         } catch (Exception e) {
             throw new RuntimeException("Error crítico al generar el reporte PDF: " + e.getMessage());
         }
+    }
+
+    public ReporteKpiDTO obtenerKpisPorFecha(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        return incidenteRepository.calcularKpis(fechaInicio, fechaFin);
     }
 }

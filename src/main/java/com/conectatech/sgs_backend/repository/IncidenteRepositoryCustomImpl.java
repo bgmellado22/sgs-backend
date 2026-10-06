@@ -1,11 +1,15 @@
 package com.conectatech.sgs_backend.repository;
 
+import com.conectatech.sgs_backend.dto.ReporteKpiDTO;
 import com.conectatech.sgs_backend.model.Incidente;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.bson.Document;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -66,5 +70,41 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
         return mongoTemplate.find(query, Incidente.class);
 
+    }
+
+    @Override
+    public ReporteKpiDTO calcularKpis(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        Criteria criteria = new Criteria();
+
+        // Filtro dinámico de fechas
+        if (fechaInicio != null && fechaFin != null) {
+            criteria = Criteria.where("fechaCreacion").gte(fechaInicio).lte(fechaFin);
+        }
+
+        org.springframework.data.mongodb.core.aggregation.AggregationExpression sumExpr = context -> 
+                new Document("$cond", new Document("if", 
+                        new Document("$in", java.util.Arrays.asList("$estado", java.util.Arrays.asList("Resuelto", "Cerrado"))))
+                .append("then", 1)
+                .append("else", 0));
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(criteria),
+                Aggregation.group()
+                        .count().as("volumenOperativoTotal")
+                        .sum(sumExpr).as("casosResueltos"));
+
+        AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "incidentes", Document.class);
+        Document resultDoc = results.getUniqueMappedResult();
+
+        if (resultDoc == null) {
+            return new ReporteKpiDTO(0L, 0.0);
+        }
+
+        long total = resultDoc.getInteger("volumenOperativoTotal", 0);
+        long resueltos = resultDoc.getInteger("casosResueltos", 0);
+
+        double tasa = (total == 0) ? 0.0 : Math.round(((double) resueltos / total) * 100.0 * 10.0) / 10.0;
+
+        return new ReporteKpiDTO(total, tasa);
     }
 }

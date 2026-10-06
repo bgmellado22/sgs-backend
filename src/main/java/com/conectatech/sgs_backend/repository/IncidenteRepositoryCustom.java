@@ -1,5 +1,6 @@
 package com.conectatech.sgs_backend.repository;
 
+import com.conectatech.sgs_backend.dto.ReporteKpiDTO;
 import com.conectatech.sgs_backend.model.Incidente;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,4 +15,7 @@ public interface IncidenteRepositoryCustom {
             String prioridad,
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin);
+
+    // Método para KPI
+    ReporteKpiDTO calcularKpis(LocalDateTime fechaInicio, LocalDateTime fechaFin);
 }
