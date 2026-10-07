@@ -87,6 +87,10 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/reportes/**")
                                                 .hasRole("ADMINISTRADOR")
 
+                                                // Dashboard ejecutivo
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/dashboard/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+
                                                 // Módulo de Notificaciones
                                                 .requestMatchers("/api/v1/notificaciones/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
