@@ -22,6 +22,9 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
     private final MongoTemplate mongoTemplate;
 
+    // Meta de respaldo (48h) para incidentes creados antes de configurar los SLAs por prioridad
+    private static final long SLA_POR_DEFECTO_MINUTOS = 2880;
+
     @Override
     public List<Incidente> buscarConFiltrosAvanzados(
             String textoBusqueda, String categoria, String tipo,
@@ -101,7 +104,10 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
                         new Document("$and", java.util.Arrays.asList(
                                 new Document("$in", java.util.Arrays.asList("$estado", java.util.Arrays.asList("Resuelto", "Cerrado"))),
                                 new Document("$ne", java.util.Arrays.asList("$tiempo_resolucion_minutos", null)),
-                                new Document("$lte", java.util.Arrays.asList("$tiempo_resolucion_minutos", 2880)) // Meta: 48h (2880 mins)
+                                // Meta propia del incidente (según su prioridad); 48h para incidentes sin SLA asignado
+                                new Document("$lte", java.util.Arrays.asList(
+                                        "$tiempo_resolucion_minutos",
+                                        new Document("$ifNull", java.util.Arrays.asList("$sla_minutos_objetivo", SLA_POR_DEFECTO_MINUTOS))))
                         ))
                 )
                 .append("then", 1)
