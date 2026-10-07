@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -19,10 +21,27 @@ public class SectorService {
     private static final double DISTANCIA_MAXIMA_KM = 4.0;
     private static final double RADIO_TIERRA_KM = 6371.0;
 
+    // Los sectores casi no cambian: se cachean para no consultarlos por cada incidente mapeado
+    private static final Duration DURACION_CACHE = Duration.ofMinutes(5);
+
     private final SectorRepository sectorRepository;
 
+    private volatile List<Sector> cache;
+    private volatile Instant cacheExpira = Instant.MIN;
+
     public List<Sector> obtenerActivos() {
-        return sectorRepository.findByActivoTrue();
+        if (cache == null || Instant.now().isAfter(cacheExpira)) {
+            cache = List.copyOf(sectorRepository.findByActivoTrue());
+            cacheExpira = Instant.now().plus(DURACION_CACHE);
+        }
+        return cache;
+    }
+
+    /**
+     * Igual que {@link #resolverSector(Double, Double, List)}, usando los sectores activos cacheados.
+     */
+    public String resolverSector(Double longitud, Double latitud) {
+        return resolverSector(longitud, latitud, obtenerActivos());
     }
 
     /**

@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class IncidenteService {
         private final IncidenteRepository incidenteRepository;
+        private final SectorService sectorService;
         private final NotificacionWebSocketService websocketService;
         // Repositorio de bitácora
         private final BitacoraProcedimientoRepository bitacoraRepository;
@@ -126,6 +127,7 @@ public class IncidenteService {
                         dto.setLatitud(incidente.getLocation().getY());
                 }
                 dto.setDireccionTexto(incidente.getDireccionTexto());
+                dto.setSector(sectorService.resolverSector(dto.getLongitud(), dto.getLatitud()));
                 return dto;
         }
 

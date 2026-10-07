@@ -21,4 +21,5 @@ public class IncidenteResponseDTO {
     private Double latitud;
     private Double longitud;
     private String direccionTexto;
+    private String sector; // Localidad más cercana (calculada, no persistida)
 }
