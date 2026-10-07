@@ -3,6 +3,7 @@ package com.conectatech.sgs_backend.controller;
 import com.conectatech.sgs_backend.model.Catalogo;
 import com.conectatech.sgs_backend.model.ParametroSistema;
 import com.conectatech.sgs_backend.service.ConfiguracionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -72,7 +73,7 @@ public class ConfiguracionController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Catalogo> crearCatalogo(
             @PathVariable String tipo,
-            @RequestBody Catalogo catalogo) {
+            @Valid @RequestBody Catalogo catalogo) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(configuracionService.crearCatalogo(tipo, catalogo));
     }
@@ -86,7 +87,7 @@ public class ConfiguracionController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Catalogo> editarCatalogo(
             @PathVariable String id,
-            @RequestBody Catalogo catalogo) {
+            @Valid @RequestBody Catalogo catalogo) {
         return ResponseEntity.ok(configuracionService.editarCatalogo(id, catalogo));
     }
 

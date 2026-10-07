@@ -114,7 +114,7 @@ public class ConfiguracionService {
      * la identidad del administrador extraída del SecurityContextHolder.
      *
      * @param tipo     Tipo de catálogo (ORIGEN, PRIORIDAD, CATEGORIA)
-     * @param catalogo Datos del nuevo catálogo (valor, etiqueta)
+     * @param catalogo Datos del nuevo catálogo (valor, etiqueta, nivelOrden, colorHex, colorBg)
      * @return Catálogo creado
      * @throws IllegalArgumentException si el tipo no está en la whitelist
      */
@@ -164,7 +164,19 @@ public class ConfiguracionService {
 
         existente.setValor(catalogoActualizado.getValor());
         existente.setEtiqueta(catalogoActualizado.getEtiqueta());
-        
+
+        // Atributos visuales: solo se actualizan si vienen en la petición,
+        // para no borrar colores existentes desde formularios que no los envían
+        if (catalogoActualizado.getNivelOrden() != null) {
+            existente.setNivelOrden(catalogoActualizado.getNivelOrden());
+        }
+        if (catalogoActualizado.getColorHex() != null) {
+            existente.setColorHex(catalogoActualizado.getColorHex());
+        }
+        if (catalogoActualizado.getColorBg() != null) {
+            existente.setColorBg(catalogoActualizado.getColorBg());
+        }
+
         Catalogo guardado = catalogoRepository.save(existente);
 
         // ── Gatillo Inalterable: Registro Forense ──
