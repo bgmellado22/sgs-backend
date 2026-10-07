@@ -159,10 +159,11 @@ public class ConfiguracionService {
         Catalogo existente = catalogoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
 
-        String valorAnterior = existente.getValor();
         String etiquetaAnterior = existente.getEtiqueta();
+        String visualAnterior = describirVisual(existente);
 
-        existente.setValor(catalogoActualizado.getValor());
+        // El valor interno es inmutable: los incidentes lo guardan como referencia
+        // (categoria / prioridad), y cambiarlo los dejaría huérfanos. Solo se edita la etiqueta.
         existente.setEtiqueta(catalogoActualizado.getEtiqueta());
 
         // Atributos visuales: solo se actualizan si vienen en la petición,
@@ -183,24 +184,32 @@ public class ConfiguracionService {
         Usuario admin = auditoriaService.getUsuarioActual();
 
         String etiquetaTipo = ETIQUETAS_AUDITORIA.getOrDefault(existente.getTipo(), existente.getTipo());
+        String visualNuevo = describirVisual(guardado);
         String mensaje = String.format(
-                "El Administrador %s ha modificado el %s: %s -> %s (Etiqueta: %s -> %s)",
+                "El Administrador %s ha modificado el %s %s (Etiqueta: %s -> %s%s)",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 etiquetaTipo,
-                valorAnterior,
                 guardado.getValor(),
                 etiquetaAnterior,
-                guardado.getEtiqueta()
+                guardado.getEtiqueta(),
+                visualAnterior.equals(visualNuevo) ? "" : "; " + visualAnterior + " -> " + visualNuevo
         );
 
         auditoriaService.registrarAuditoria(
-                "CATALOGO_MODIFICACION", 
-                valorAnterior + " (" + etiquetaAnterior + ")", 
-                guardado.getValor() + " (" + guardado.getEtiqueta() + ")", 
+                "CATALOGO_MODIFICACION",
+                guardado.getValor() + " (" + etiquetaAnterior + ", " + visualAnterior + ")",
+                guardado.getValor() + " (" + guardado.getEtiqueta() + ", " + visualNuevo + ")",
                 mensaje
         );
 
         return guardado;
+    }
+
+    private String describirVisual(Catalogo catalogo) {
+        if (catalogo.getNivelOrden() == null && catalogo.getColorHex() == null) {
+            return "sin color";
+        }
+        return "Nivel " + catalogo.getNivelOrden() + ", Color " + catalogo.getColorHex();
     }
 
     /**
