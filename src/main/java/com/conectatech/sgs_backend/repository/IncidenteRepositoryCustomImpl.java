@@ -1,6 +1,7 @@
 package com.conectatech.sgs_backend.repository;
 
 import com.conectatech.sgs_backend.dto.ReporteKpiDTO;
+import com.conectatech.sgs_backend.model.Catalogo;
 import com.conectatech.sgs_backend.model.Incidente;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -74,16 +75,20 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
     @Override
     public ReporteKpiDTO calcularKpis(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        Criteria criteria = new Criteria();
+        // La agregación se ejecuta sobre "incidentes" sin mapeo de entidad,
+        // por lo que se usan los nombres de campo reales (fecha_creacion)
+        Criteria criteria = Criteria.where("activo").is(true);
 
         // Filtro dinámico de fechas
         if (fechaInicio != null && fechaFin != null) {
-            criteria = Criteria.where("fechaCreacion").gte(fechaInicio).lte(fechaFin);
+            criteria = criteria.and("fecha_creacion").gte(fechaInicio).lte(fechaFin);
         } else if (fechaInicio != null) {
-            criteria = Criteria.where("fechaCreacion").gte(fechaInicio);
+            criteria = criteria.and("fecha_creacion").gte(fechaInicio);
         } else if (fechaFin != null) {
-            criteria = Criteria.where("fechaCreacion").lte(fechaFin);
+            criteria = criteria.and("fecha_creacion").lte(fechaFin);
         }
+
+        List<String> prioridadesCriticas = obtenerPrioridadesCriticas();
 
         org.springframework.data.mongodb.core.aggregation.AggregationExpression sumExpr = context -> 
                 new Document("$cond", new Document("if", 
@@ -104,7 +109,9 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
         org.springframework.data.mongodb.core.aggregation.AggregationExpression sumCritExpr = context -> 
                 new Document("$cond", new Document("if", 
-                        new Document("$in", java.util.Arrays.asList("$prioridad", java.util.Arrays.asList("Alta", "Crítica"))))
+                        new Document("$in", java.util.Arrays.asList(
+                                new Document("$toUpper", new Document("$ifNull", java.util.Arrays.asList("$prioridad", ""))),
+                                prioridadesCriticas)))
                 .append("then", 1)
                 .append("else", 0));
 
@@ -133,5 +140,33 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
         double indiceCriticidad = (total == 0) ? 0.0 : Math.round(((double) casosCriticos / total) * 100.0 * 10.0) / 10.0;
 
         return new ReporteKpiDTO(total, tasa, cumplimientoSla, indiceCriticidad);
+    }
+
+    /**
+     * Prioridades críticas: ALTA y cualquier prioridad del catálogo con un
+     * nivelOrden igual o superior (ej. una CRITICA creada por el administrador).
+     * Valores en mayúsculas para comparar sin importar cómo quedaron guardados.
+     */
+    private List<String> obtenerPrioridadesCriticas() {
+        List<Catalogo> prioridades = mongoTemplate.find(
+                Query.query(Criteria.where("tipo").is("PRIORIDAD").and("activo").is(true)),
+                Catalogo.class);
+
+        Integer nivelAlta = prioridades.stream()
+                .filter(p -> "ALTA".equalsIgnoreCase(p.getValor()) && p.getNivelOrden() != null)
+                .map(Catalogo::getNivelOrden)
+                .findFirst()
+                .orElse(null);
+
+        List<String> criticas = new ArrayList<>();
+        criticas.add("ALTA");
+        if (nivelAlta != null) {
+            prioridades.stream()
+                    .filter(p -> p.getNivelOrden() != null && p.getNivelOrden() >= nivelAlta)
+                    .map(p -> p.getValor().toUpperCase())
+                    .filter(v -> !criticas.contains(v))
+                    .forEach(criticas::add);
+        }
+        return criticas;
     }
 }

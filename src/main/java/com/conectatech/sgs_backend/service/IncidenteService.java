@@ -39,7 +39,7 @@ public class IncidenteService {
                 incidente.setCategoria(dto.getCategoria());
                 incidente.setTipo(dto.getTipo());
                 incidente.setDescripcion(dto.getDescripcion());
-                incidente.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "Media");
+                incidente.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "MEDIA");
                 incidente.setOrigen(dto.getOrigen());
                 GeoJsonPoint puntoGPS = new GeoJsonPoint(dto.getLongitud(), dto.getLatitud());
                 incidente.setLocation(puntoGPS);

@@ -52,6 +52,10 @@ public class SecurityConfig {
                                                 // Módulo de Administración
                                                 .requestMatchers("/api/v1/usuarios/inspectores")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+                                                // Lectura de catálogos (formularios y colores de badges);
+                                                // la escritura va por /api/v1/configuracion (solo ADMINISTRADOR)
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
                                                 .requestMatchers("/api/v1/usuarios/**", "/api/v1/catalogos/**")
                                                 .hasRole("ADMINISTRADOR")
 
