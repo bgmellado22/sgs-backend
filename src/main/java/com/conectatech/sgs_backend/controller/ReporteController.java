@@ -32,7 +32,7 @@ public class ReporteController {
                                 MediaType.parseMediaType(
                                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
                 // Nombre del archivo que recibirá el usuario
-                headers.setContentDispositionFormData("attachment", "Consolidado_SGS.xlsx");
+                headers.setContentDispositionFormData("attachment", "Consolidado_SGSP.xlsx");
 
                 return ResponseEntity.ok()
                                 .headers(headers)
@@ -50,7 +50,7 @@ public class ReporteController {
                 // Tipo MIME oficial para PDF
                 headers.setContentType(MediaType.APPLICATION_PDF);
                 // "attachment" fuerza la descarga
-                headers.setContentDispositionFormData("attachment", "Consolidado_SGS.pdf");
+                headers.setContentDispositionFormData("attachment", "Consolidado_SGSP.pdf");
 
                 return ResponseEntity.ok()
                                 .headers(headers)
@@ -60,9 +60,10 @@ public class ReporteController {
         @GetMapping("/kpis")
         @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR', 'INSPECTOR')")
         public ResponseEntity<ReporteKpiDTO> obtenerKpis(
+                        @RequestParam(required = false) String categoria,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
-                ReporteKpiDTO kpis = reporteService.obtenerKpisPorFecha(fechaInicio, fechaFin);
+                ReporteKpiDTO kpis = reporteService.obtenerKpisPorFecha(categoria, fechaInicio, fechaFin);
                 return ResponseEntity.ok(kpis);
         }
 }

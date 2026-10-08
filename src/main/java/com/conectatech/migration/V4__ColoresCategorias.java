@@ -53,9 +53,9 @@ public class V4__ColoresCategorias {
         Set<Object> asignadas = new HashSet<>();
         List<Color> libres = new ArrayList<>(PALETA);
 
-        // 1. Categorías base: SOS púrpura, Delito fucsia, Incivilidad verde
+        // 1. Categorías base: SOS púrpura, Delito turquesa, Incivilidad verde
         asignarBase(catalogos, ID_SOS, "SOS", PURPURA, asignadas, libres);
-        asignarBase(catalogos, ID_DELITO, "DELITO", FUCSIA, asignadas, libres);
+        asignarBase(catalogos, ID_DELITO, "DELITO", TURQUESA, asignadas, libres);
         asignarBase(catalogos, ID_INCIVILIDAD, "INCIVILIDAD", VERDE, asignadas, libres);
 
         // 2. Resto de categorías (creadas por el administrador): de más a menos grave,

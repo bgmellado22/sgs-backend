@@ -77,10 +77,14 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
     }
 
     @Override
-    public ReporteKpiDTO calcularKpis(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+    public ReporteKpiDTO calcularKpis(String categoria, LocalDateTime fechaInicio, LocalDateTime fechaFin) {
         // La agregación se ejecuta sobre "incidentes" sin mapeo de entidad,
         // por lo que se usan los nombres de campo reales (fecha_creacion)
         Criteria criteria = Criteria.where("activo").is(true);
+
+        if (categoria != null && !categoria.isBlank()) {
+            criteria = criteria.and("categoria").is(categoria);
+        }
 
         // Filtro dinámico de fechas
         if (fechaInicio != null && fechaFin != null) {

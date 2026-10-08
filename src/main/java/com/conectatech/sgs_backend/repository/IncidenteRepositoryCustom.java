@@ -17,5 +17,5 @@ public interface IncidenteRepositoryCustom {
             LocalDateTime fechaFin);
 
     // Método para KPI
-    ReporteKpiDTO calcularKpis(LocalDateTime fechaInicio, LocalDateTime fechaFin);
+    ReporteKpiDTO calcularKpis(String categoria, LocalDateTime fechaInicio, LocalDateTime fechaFin);
 }
