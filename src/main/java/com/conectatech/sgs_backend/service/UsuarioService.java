@@ -33,7 +33,10 @@ public class UsuarioService {
                 return usuarios.stream()
                                 .map(usuario -> UsuarioResponseDTO.builder()
                                                 .id(usuario.getId())
-                                                .rut(usuario.getRut())
+                                                .run(usuario.getRun())
+                                                .nombres(usuario.getNombres())
+                                                .apellidoPaterno(usuario.getApellidoPaterno())
+                                                .apellidoMaterno(usuario.getApellidoMaterno())
                                                 .nombreCompleto(usuario.getNombreCompleto())
                                                 .email(usuario.getEmail())
                                                 .rol(usuario.getRol())
@@ -47,7 +50,19 @@ public class UsuarioService {
                 Usuario usuario = usuarioRepository.findById(id)
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
 
-                usuario.setNombreCompleto(dto.getNombreCompleto());
+                if (dto.getNombres() != null) {
+                    usuario.setNombres(dto.getNombres());
+                }
+                if (dto.getApellidoPaterno() != null) {
+                    usuario.setApellidoPaterno(dto.getApellidoPaterno());
+                }
+                if (dto.getApellidoMaterno() != null) {
+                    usuario.setApellidoMaterno(dto.getApellidoMaterno());
+                }
+                if (dto.getNombres() != null && dto.getApellidoPaterno() != null && dto.getApellidoMaterno() != null) {
+                    usuario.setNombreCompleto(dto.getNombres() + " " + dto.getApellidoPaterno() + " " + dto.getApellidoMaterno());
+                }
+
                 usuario.setEmail(dto.getEmail());
                 usuario.setRol(dto.getRol());
 
@@ -55,7 +70,10 @@ public class UsuarioService {
 
                 return UsuarioResponseDTO.builder()
                                 .id(usuarioActualizado.getId())
-                                .rut(usuarioActualizado.getRut())
+                                .run(usuarioActualizado.getRun())
+                                .nombres(usuarioActualizado.getNombres())
+                                .apellidoPaterno(usuarioActualizado.getApellidoPaterno())
+                                .apellidoMaterno(usuarioActualizado.getApellidoMaterno())
                                 .nombreCompleto(usuarioActualizado.getNombreCompleto())
                                 .email(usuarioActualizado.getEmail())
                                 .rol(usuarioActualizado.getRol())
@@ -71,8 +89,17 @@ public class UsuarioService {
                 Usuario usuario = usuarioRepository.findById(actor.getId())
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + actor.getId()));
 
-                if (dto.getNombreCompleto() != null && !dto.getNombreCompleto().isBlank()) {
-                        usuario.setNombreCompleto(dto.getNombreCompleto());
+                if (dto.getNombres() != null) {
+                        usuario.setNombres(dto.getNombres());
+                }
+                if (dto.getApellidoPaterno() != null) {
+                        usuario.setApellidoPaterno(dto.getApellidoPaterno());
+                }
+                if (dto.getApellidoMaterno() != null) {
+                        usuario.setApellidoMaterno(dto.getApellidoMaterno());
+                }
+                if (dto.getNombres() != null && dto.getApellidoPaterno() != null && dto.getApellidoMaterno() != null) {
+                        usuario.setNombreCompleto(dto.getNombres() + " " + dto.getApellidoPaterno() + " " + dto.getApellidoMaterno());
                 }
                 if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
                         usuario.setEmail(dto.getEmail());
@@ -85,7 +112,10 @@ public class UsuarioService {
 
                 return UsuarioResponseDTO.builder()
                                 .id(usuarioActualizado.getId())
-                                .rut(usuarioActualizado.getRut())
+                                .run(usuarioActualizado.getRun())
+                                .nombres(usuarioActualizado.getNombres())
+                                .apellidoPaterno(usuarioActualizado.getApellidoPaterno())
+                                .apellidoMaterno(usuarioActualizado.getApellidoMaterno())
                                 .nombreCompleto(usuarioActualizado.getNombreCompleto())
                                 .email(usuarioActualizado.getEmail())
                                 .rol(usuarioActualizado.getRol())
@@ -124,7 +154,10 @@ public class UsuarioService {
 
                 return UsuarioResponseDTO.builder()
                                 .id(usuarioActualizado.getId())
-                                .rut(usuarioActualizado.getRut())
+                                .run(usuarioActualizado.getRun())
+                                .nombres(usuarioActualizado.getNombres())
+                                .apellidoPaterno(usuarioActualizado.getApellidoPaterno())
+                                .apellidoMaterno(usuarioActualizado.getApellidoMaterno())
                                 .nombreCompleto(usuarioActualizado.getNombreCompleto())
                                 .email(usuarioActualizado.getEmail())
                                 .rol(usuarioActualizado.getRol())
@@ -139,7 +172,10 @@ public class UsuarioService {
                 return inspectores.stream()
                                 .map(inspector -> UsuarioResponseDTO.builder()
                                                 .id(inspector.getId())
-                                                .rut(inspector.getRut())
+                                                .run(inspector.getRun())
+                                                .nombres(inspector.getNombres())
+                                                .apellidoPaterno(inspector.getApellidoPaterno())
+                                                .apellidoMaterno(inspector.getApellidoMaterno())
                                                 .nombreCompleto(inspector.getNombreCompleto())
                                                 .email(inspector.getEmail())
                                                 .rol(inspector.getRol())

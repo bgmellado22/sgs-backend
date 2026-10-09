@@ -43,7 +43,11 @@ public class JwtUtil {
         extraClaims.put("rol", rol);
 
         if (userDetails instanceof Usuario) {
-            extraClaims.put("nombreCompleto", ((Usuario) userDetails).getNombreCompleto());
+            Usuario u = (Usuario) userDetails;
+            extraClaims.put("nombreCompleto", u.getNombreCompleto());
+            extraClaims.put("nombres", u.getNombres());
+            extraClaims.put("apellidoPaterno", u.getApellidoPaterno());
+            extraClaims.put("apellidoMaterno", u.getApellidoMaterno());
         }
 
         return generateToken(extraClaims, userDetails);

@@ -8,7 +8,10 @@ import lombok.Data;
 @Builder
 public class UsuarioResponseDTO {
     private String id;
-    private String rut;
+    private String run;
+    private String nombres;
+    private String apellidoPaterno;
+    private String apellidoMaterno;
     private String nombreCompleto;
     private String email;
     private RolUsuario rol;

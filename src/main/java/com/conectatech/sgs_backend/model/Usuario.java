@@ -28,8 +28,11 @@ public class Usuario implements UserDetails {
     private String id;
 
     @Indexed(unique = true)
-    private String rut;
+    private String run;
 
+    private String nombres;
+    private String apellidoPaterno;
+    private String apellidoMaterno;
     private String nombreCompleto;
 
     @Indexed(unique = true)
