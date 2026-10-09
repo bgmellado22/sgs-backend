@@ -55,7 +55,7 @@ public class SecurityConfig {
                                                 // Lectura de catálogos (formularios y colores de badges);
                                                 // la escritura va por /api/v1/configuracion (solo ADMINISTRADOR)
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR", "CIUDADANO")
                                                 .requestMatchers("/api/v1/usuarios/**", "/api/v1/catalogos/**")
                                                 .hasRole("ADMINISTRADOR")
 
@@ -79,13 +79,13 @@ public class SecurityConfig {
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                                                 .requestMatchers(HttpMethod.PATCH, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasRole("ADMINISTRADOR")
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR", "CIUDADANO")
 
                                                 // Módulo de Reportes
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/reportes/**")
