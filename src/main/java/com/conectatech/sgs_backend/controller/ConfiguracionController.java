@@ -63,6 +63,17 @@ public class ConfiguracionController {
     // ──────────────────────────────────────────────
 
     /**
+     * GET /api/v1/configuracion/catalogos/{tipo}
+     * Retorna todos los catálogos (activos e inactivos) del tipo indicado.
+     * Seguridad: Solo ADMINISTRADOR.
+     */
+    @GetMapping("/catalogos/{tipo}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<List<Catalogo>> obtenerCatalogosAdmin(@PathVariable String tipo) {
+        return ResponseEntity.ok(configuracionService.obtenerCatalogosAdmin(tipo));
+    }
+
+    /**
      * POST /api/v1/configuracion/catalogos/{tipo}
      * Crea un nuevo valor de catálogo del tipo indicado.
      * Tipos permitidos: origen, prioridad, categoria

@@ -26,7 +26,7 @@ public class ConfiguracionService {
     /**
      * Tipos de catálogo permitidos para creación dinámica.
      */
-    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "PRIORIDAD", "CATEGORIA");
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "PRIORIDAD", "CATEGORIA", "TIPO_EVENTO");
 
     /**
      * Etiquetas legibles para el mensaje de auditoría por tipo.
@@ -34,7 +34,8 @@ public class ConfiguracionService {
     private static final Map<String, String> ETIQUETAS_AUDITORIA = Map.of(
             "ORIGEN", "Origen de denuncia",
             "PRIORIDAD", "Prioridad",
-            "CATEGORIA", "Categoría"
+            "CATEGORIA", "Categoría",
+            "TIPO_EVENTO", "Tipo de Evento"
     );
 
     // ──────────────────────────────────────────────
@@ -108,6 +109,17 @@ public class ConfiguracionService {
     //  con auditoría forense Zero-Trust
     // ──────────────────────────────────────────────
 
+    public List<Catalogo> obtenerCatalogosAdmin(String tipo) {
+        String tipoNormalizado = tipo.toUpperCase();
+        if (!TIPOS_PERMITIDOS.contains(tipoNormalizado)) {
+            throw new IllegalArgumentException(
+                    "Tipo de catálogo no permitido: " + tipo
+                            + ". Valores válidos: " + TIPOS_PERMITIDOS
+            );
+        }
+        return catalogoRepository.findByTipo(tipoNormalizado);
+    }
+
     /**
      * Crea un nuevo valor en el catálogo del tipo indicado.
      * Gatillo Inalterable: registra automáticamente en la bitácora
@@ -161,10 +173,12 @@ public class ConfiguracionService {
 
         String etiquetaAnterior = existente.getEtiqueta();
         String visualAnterior = describirVisual(existente);
+        boolean estadoAnterior = existente.isActivo();
 
         // El valor interno es inmutable: los incidentes lo guardan como referencia
-        // (categoria / prioridad), y cambiarlo los dejaría huérfanos. Solo se edita la etiqueta.
+        // (categoria / prioridad), y cambiarlo los dejaría huérfanos. Solo se edita la etiqueta y estado.
         existente.setEtiqueta(catalogoActualizado.getEtiqueta());
+        existente.setActivo(catalogoActualizado.isActivo());
 
         // Atributos visuales: solo se actualizan si vienen en la petición,
         // para no borrar colores existentes desde formularios que no los envían
@@ -182,32 +196,67 @@ public class ConfiguracionService {
 
         // ── Gatillo Inalterable: Registro Forense ──
         Usuario admin = auditoriaService.getUsuarioActual();
-
+        String nombreAdmin = admin != null ? admin.getNombreCompleto() : "Sistema";
         String etiquetaTipo = ETIQUETAS_AUDITORIA.getOrDefault(existente.getTipo(), existente.getTipo());
         String visualNuevo = describirVisual(guardado);
-        String mensaje = String.format(
-                "El Administrador %s ha modificado el %s %s (Etiqueta: %s -> %s%s)",
-                admin != null ? admin.getNombreCompleto() : "Sistema",
-                etiquetaTipo,
-                guardado.getValor(),
-                etiquetaAnterior,
-                guardado.getEtiqueta(),
-                visualAnterior.equals(visualNuevo) ? "" : "; " + visualAnterior + " -> " + visualNuevo
-        );
 
-        auditoriaService.registrarAuditoria(
-                "CATALOGO_MODIFICACION",
-                guardado.getValor() + " (" + etiquetaAnterior + ", " + visualAnterior + ")",
-                guardado.getValor() + " (" + guardado.getEtiqueta() + ", " + visualNuevo + ")",
-                mensaje
-        );
+        // 1. Registrar cambio de estado (Activación/Desactivación)
+        if (estadoAnterior != guardado.isActivo()) {
+            String accion = guardado.isActivo() ? "activado" : "desactivado";
+            String tipoAccion = guardado.isActivo() ? "CATALOGO_ACTIVACION" : "CATALOGO_DESACTIVACION";
+            String mensajeEstado = String.format(
+                    "El Administrador %s ha %s el %s: %s",
+                    nombreAdmin,
+                    accion,
+                    etiquetaTipo,
+                    guardado.getValor()
+            );
+            auditoriaService.registrarAuditoria(
+                    tipoAccion,
+                    guardado.getValor() + " (" + (estadoAnterior ? "Activo" : "Inactivo") + ")",
+                    guardado.getValor() + " (" + (guardado.isActivo() ? "Activo" : "Inactivo") + ")",
+                    mensajeEstado
+            );
+        }
+
+        // 2. Registrar modificación de propiedades SOLO si hubo cambios reales
+        boolean cambioEtiqueta = !etiquetaAnterior.equals(guardado.getEtiqueta());
+        boolean cambioVisual = !visualAnterior.equals(visualNuevo);
+
+        if (cambioEtiqueta || cambioVisual) {
+            String difVisual = "";
+            if (cambioVisual) {
+                if (visualAnterior.isEmpty()) {
+                    difVisual = "; Nuevo aspecto: " + visualNuevo;
+                } else if (visualNuevo.isEmpty()) {
+                    difVisual = "; Aspecto removido";
+                } else {
+                    difVisual = "; " + visualAnterior + " -> " + visualNuevo;
+                }
+            }
+
+            String mensajeMod = String.format(
+                    "El Administrador %s ha modificado el %s %s (Etiqueta: %s -> %s%s)",
+                    nombreAdmin,
+                    etiquetaTipo,
+                    guardado.getValor(),
+                    etiquetaAnterior,
+                    guardado.getEtiqueta(),
+                    difVisual
+            );
+
+            String valorAnt = guardado.getValor() + " (" + etiquetaAnterior + (!visualAnterior.isEmpty() ? ", " + visualAnterior : "") + ")";
+            String valorNue = guardado.getValor() + " (" + guardado.getEtiqueta() + (!visualNuevo.isEmpty() ? ", " + visualNuevo : "") + ")";
+            
+            auditoriaService.registrarAuditoria("CATALOGO_MODIFICACION", valorAnt, valorNue, mensajeMod);
+        }
 
         return guardado;
     }
 
     private String describirVisual(Catalogo catalogo) {
         if (catalogo.getNivelOrden() == null && catalogo.getColorHex() == null) {
-            return "sin color";
+            return "";
         }
         return "Nivel " + catalogo.getNivelOrden() + ", Color " + catalogo.getColorHex();
     }

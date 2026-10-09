@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface CatalogoRepository extends MongoRepository<Catalogo, String> {
+    List<Catalogo> findByTipo(String tipo);
     List<Catalogo> findByTipoAndActivoTrue(String tipo);
 }
