@@ -7,10 +7,12 @@ import com.conectatech.sgs_backend.exception.CuentaBloqueadaException;
 import com.conectatech.sgs_backend.exception.CredencialesIncorrectasException;
 import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
+import com.conectatech.sgs_backend.model.enums.RolUsuario;
 import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import com.conectatech.sgs_backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -18,6 +20,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
@@ -35,6 +38,17 @@ public class AuthService {
         private final BitacoraProcedimientoRepository bitacoraRepository;
 
         public AuthResponse register(RegisterRequest request) {
+                // Validar duplicados antes de guardar
+                if (usuarioRepository.existsByEmail(request.getEmail())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo ya está registrado.");
+                }
+                if (usuarioRepository.existsByRun(request.getRun())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El RUN ya está registrado.");
+                }
+
+                // Asignar rol CIUDADANO por defecto si viene nulo
+                RolUsuario rol = request.getRol() != null ? request.getRol() : RolUsuario.CIUDADANO;
+
                 var user = Usuario.builder()
                                 .run(request.getRun())
                                 .nombres(request.getNombres())
@@ -43,7 +57,7 @@ public class AuthService {
                                 .nombreCompleto(request.getNombres() + " " + request.getApellidoPaterno() + " " + request.getApellidoMaterno())
                                 .email(request.getEmail())
                                 .password(passwordEncoder.encode(request.getPassword()))
-                                .rol(request.getRol())
+                                .rol(rol)
                                 .estado(true)
                                 .intentosFallidos(0)
                                 .build();

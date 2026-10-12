@@ -16,4 +16,8 @@ public interface UsuarioRepository extends MongoRepository<Usuario, String> {
     Optional<Usuario> findByRun(String run);
 
     List<Usuario> findByRolAndEstado(RolUsuario rol, Boolean estado);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByRun(String run);
 }
