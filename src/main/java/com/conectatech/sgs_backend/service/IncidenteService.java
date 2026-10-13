@@ -1,8 +1,10 @@
 package com.conectatech.sgs_backend.service;
 
+import com.conectatech.sgs_backend.dto.DerivacionRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
 import com.conectatech.sgs_backend.model.Incidente;
+import com.conectatech.sgs_backend.model.Evidencia;
 import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
@@ -12,29 +14,46 @@ import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.ParametroSistemaRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.gridfs.GridFsResource;
+import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import com.mongodb.client.gridfs.model.GridFSFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IncidenteService {
         private final IncidenteRepository incidenteRepository;
         private final SectorService sectorService;
         private final NotificacionWebSocketService websocketService;
-        // Repositorio de bitácora
         private final BitacoraProcedimientoRepository bitacoraRepository;
         private final ParametroSistemaRepository parametroRepository;
+        private final GridFsTemplate gridFsTemplate;
 
-        // Guardar
+        // Guardar sin archivo (compatibilidad)
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto) {
+                return crearIncidente(dto, null);
+        }
+
+        // Guardar con soporte de evidencia (foto / video)
+        public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto, MultipartFile foto) {
                 Incidente incidente = new Incidente();
 
                 incidente.setCategoria(dto.getCategoria());
@@ -51,6 +70,31 @@ public class IncidenteService {
                 incidente.setFechaCreacion(LocalDateTime.now());
 
                 asignarVencimientoSla(incidente);
+
+                // Procesar evidencia fotográfica/video si fue adjuntada
+                if (foto != null && !foto.isEmpty()) {
+                        try {
+                                ObjectId fileId = gridFsTemplate.store(
+                                        foto.getInputStream(),
+                                        foto.getOriginalFilename(),
+                                        foto.getContentType()
+                                );
+                                Evidencia evidencia = Evidencia.builder()
+                                        .id(fileId.toHexString())
+                                        .nombre(foto.getOriginalFilename())
+                                        .tipo(foto.getContentType())
+                                        .tamano(foto.getSize())
+                                        .url("/api/v1/incidentes/evidencias/" + fileId.toHexString())
+                                        .fechaCarga(LocalDateTime.now())
+                                        .build();
+                                if (incidente.getEvidencias() == null) {
+                                        incidente.setEvidencias(new ArrayList<>());
+                                }
+                                incidente.getEvidencias().add(evidencia);
+                        } catch (IOException e) {
+                                log.error("Error al almacenar la evidencia en GridFS", e);
+                        }
+                }
 
                 Incidente guardado = incidenteRepository.save(incidente);
 
@@ -97,6 +141,114 @@ public class IncidenteService {
                 return mapToDTO(guardado);
         }
 
+        // Adjuntar evidencia posterior a una denuncia existente
+        public IncidenteResponseDTO adjuntarEvidencia(String id, MultipartFile archivo) {
+                Incidente incidente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Incidente no encontrado: " + id));
+
+                if (archivo == null || archivo.isEmpty()) {
+                        throw new IllegalArgumentException("El archivo de evidencia está vacío.");
+                }
+
+                try {
+                        ObjectId fileId = gridFsTemplate.store(
+                                archivo.getInputStream(),
+                                archivo.getOriginalFilename(),
+                                archivo.getContentType()
+                        );
+                        Evidencia evidencia = Evidencia.builder()
+                                .id(fileId.toHexString())
+                                .nombre(archivo.getOriginalFilename())
+                                .tipo(archivo.getContentType())
+                                .tamano(archivo.getSize())
+                                .url("/api/v1/incidentes/evidencias/" + fileId.toHexString())
+                                .fechaCarga(LocalDateTime.now())
+                                .build();
+
+                        if (incidente.getEvidencias() == null) {
+                                incidente.setEvidencias(new ArrayList<>());
+                        }
+                        incidente.getEvidencias().add(evidencia);
+
+                        Incidente guardado = incidenteRepository.save(incidente);
+
+                        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                        Usuario actor = (Usuario) auth.getPrincipal();
+                        registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
+                                        "Evidencia", "Adjunto previo", archivo.getOriginalFilename(),
+                                        "Carga de evidencia multimedia (" + archivo.getContentType() + ")");
+
+                        return mapToDTO(guardado);
+                } catch (IOException e) {
+                        log.error("Error al adjuntar evidencia a incidente: {}", id, e);
+                        throw new RuntimeException("Error al procesar el archivo: " + e.getMessage());
+                }
+        }
+
+        // Obtener recurso GridFS para streaming de fotos/videos
+        public GridFsResource obtenerRecursoEvidencia(String gridFsId) {
+                GridFSFile file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(gridFsId)));
+                if (file == null) {
+                        throw new RuntimeException("Evidencia no encontrada con ID: " + gridFsId);
+                }
+                return gridFsTemplate.getResource(file);
+        }
+
+        // Gestión Operativa: Derivar denuncia a Carabineros o Municipalidad
+        public IncidenteResponseDTO derivarIncidente(String id, DerivacionRequestDTO dto) {
+                Incidente incidente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Incidente no encontrado con el ID: " + id));
+
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                Usuario actor = (Usuario) auth.getPrincipal();
+
+                String entidadAnterior = incidente.getDerivacionEntidad() != null
+                                ? incidente.getDerivacionEntidad()
+                                : "Sin derivar";
+
+                incidente.setDerivado(true);
+                incidente.setDerivacionEntidad(dto.getEntidad());
+                incidente.setDerivacionDetalle(dto.getDetalle());
+                incidente.setDerivacionInspectorId(dto.getInspectorId());
+                incidente.setDerivacionInspectorNombre(dto.getInspectorNombre());
+                incidente.setDerivacionObservacion(dto.getObservacion());
+                incidente.setFechaDerivacion(LocalDateTime.now());
+                incidente.setDerivadoPor(actor.getNombreCompleto());
+
+                // Si la denuncia estaba "Pendiente", la derivación inicia la gestión ("En proceso")
+                String estadoAnterior = incidente.getEstado();
+                if ("Pendiente".equalsIgnoreCase(estadoAnterior)) {
+                        incidente.setEstado("En proceso");
+                        registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor,
+                                        "Estado", "Pendiente", "En proceso",
+                                        "Transición automática a En proceso por derivación operativa");
+                }
+
+                Incidente guardado = incidenteRepository.save(incidente);
+
+                String valorNuevoAuditoria = dto.getEntidad().equalsIgnoreCase("CARABINEROS")
+                                ? "Carabineros de Chile" + (dto.getDetalle() != null && !dto.getDetalle().isBlank() ? " (" + dto.getDetalle() + ")" : "")
+                                : "Seguridad Municipal" + (dto.getInspectorNombre() != null && !dto.getInspectorNombre().isBlank() ? " (" + dto.getInspectorNombre() + ")" : "");
+
+                registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
+                                "Derivación Operativa", entidadAnterior, valorNuevoAuditoria,
+                                dto.getObservacion() != null && !dto.getObservacion().isBlank() ? dto.getObservacion() : "Derivación ejecutada desde panel de gestión");
+
+                // Notificación global por WebSocket
+                String destinatario = dto.getEntidad().equalsIgnoreCase("CARABINEROS") ? "Carabineros de Chile" : "Seguridad Municipal";
+                Notificacion alertaDerivacion = Notificacion.builder()
+                                .titulo("Incidente Derivado")
+                                .mensaje("El operador " + actor.getNombreCompleto() + " derivó el incidente "
+                                                + guardado.getCodigoCorrelativo() + " a " + destinatario)
+                                .tipo(TipoNotificacion.INFORMATIVO)
+                                .referenciaId(guardado.getId())
+                                .usuarioDestinoId("GLOBAL")
+                                .build();
+                websocketService.despacharAlertaGlobal(alertaDerivacion);
+
+                return mapToDTO(guardado);
+        }
+
         // Listar
         public List<IncidenteResponseDTO> obtenerTodos() {
                 return incidenteRepository.findByActivoTrue()
@@ -128,6 +280,20 @@ public class IncidenteService {
                 }
                 dto.setDireccionTexto(incidente.getDireccionTexto());
                 dto.setSector(sectorService.resolverSector(dto.getLongitud(), dto.getLatitud()));
+
+                // Gestión Operativa (Derivación)
+                dto.setDerivado(incidente.isDerivado());
+                dto.setDerivacionEntidad(incidente.getDerivacionEntidad());
+                dto.setDerivacionDetalle(incidente.getDerivacionDetalle());
+                dto.setDerivacionInspectorId(incidente.getDerivacionInspectorId());
+                dto.setDerivacionInspectorNombre(incidente.getDerivacionInspectorNombre());
+                dto.setDerivacionObservacion(incidente.getDerivacionObservacion());
+                dto.setFechaDerivacion(incidente.getFechaDerivacion());
+                dto.setDerivadoPor(incidente.getDerivadoPor());
+
+                // Evidencias Multimedia
+                dto.setEvidencias(incidente.getEvidencias() != null ? incidente.getEvidencias() : Collections.emptyList());
+
                 return dto;
         }
 
@@ -247,6 +413,28 @@ public class IncidenteService {
                                         incidente.getTipo(), dto.getTipo(),
                                         "Edición de tipo por parte de " + actor.getNombreCompleto());
                         incidente.setTipo(dto.getTipo());
+                }
+
+                // Auditar y Actualizar Estado si fue modificado en la edición
+                if (dto.getEstado() != null && !dto.getEstado().equals(incidente.getEstado())) {
+                        String estadoAnterior = incidente.getEstado();
+                        String nuevoEstado = dto.getEstado();
+                        incidente.setEstado(nuevoEstado);
+
+                        if ("Resuelto".equals(nuevoEstado) || "Cerrado".equals(nuevoEstado)) {
+                                if (incidente.getFechaCierre() == null) {
+                                        incidente.setFechaCierre(LocalDateTime.now());
+                                        long minutos = ChronoUnit.MINUTES.between(incidente.getFechaCreacion(), incidente.getFechaCierre());
+                                        incidente.setTiempoResolucionMinutos(minutos);
+                                }
+                        } else {
+                                incidente.setFechaCierre(null);
+                                incidente.setTiempoResolucionMinutos(null);
+                        }
+
+                        registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Estado",
+                                        estadoAnterior, nuevoEstado,
+                                        "Edición de estado administrativo por " + actor.getNombreCompleto());
                 }
 
                 Incidente actualizado = incidenteRepository.save(incidente);

@@ -45,4 +45,11 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         
         return MongoClients.create(mongoClientSettings);
     }
+
+    @org.springframework.context.annotation.Bean
+    public org.springframework.data.mongodb.gridfs.GridFsTemplate gridFsTemplate(
+            org.springframework.data.mongodb.MongoDatabaseFactory dbFactory,
+            org.springframework.data.mongodb.core.convert.MappingMongoConverter converter) {
+        return new org.springframework.data.mongodb.gridfs.GridFsTemplate(dbFactory, converter);
+    }
 }

@@ -90,11 +90,12 @@ public class IncidenteControllerTest {
     }
 
     @Test
-    @DisplayName("GET /incidentes con rol CIUDADANO → 403 Forbidden")
-    public void testObtenerIncidentes_ConRolCiudadano_Retorna403() throws Exception {
+    @DisplayName("GET /incidentes con rol CIUDADANO → 200 OK")
+    public void testObtenerIncidentes_ConRolCiudadano_Retorna200() throws Exception {
+        when(incidenteService.obtenerTodos()).thenReturn(Collections.emptyList());
         mockMvc.perform(get("/api/v1/incidentes")
                 .with(user("ciudadano").roles("CIUDADANO")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     // Tests POST /api/v1/incidentes

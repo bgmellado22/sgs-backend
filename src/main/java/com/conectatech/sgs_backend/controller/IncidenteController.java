@@ -18,6 +18,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import com.conectatech.sgs_backend.dto.DerivacionRequestDTO;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.data.mongodb.gridfs.GridFsResource;
+
 @RestController
 @RequestMapping("/api/v1/incidentes")
 @CrossOrigin(origins = { "http://localhost:5173", "https://sgs-el-tabo-frontend.vercel.app" })
@@ -38,8 +43,43 @@ public class IncidenteController {
             @RequestPart("incidente") @Valid IncidenteRequestDTO incidenteDTO,
             @RequestPart(value = "evidencia", required = false) MultipartFile foto) {
 
-        IncidenteResponseDTO creado = incidenteService.crearIncidente(incidenteDTO);
+        IncidenteResponseDTO creado = incidenteService.crearIncidente(incidenteDTO, foto);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+    }
+
+    // Gestión Operativa: Derivación a Carabineros o Municipalidad
+    @PatchMapping("/{id}/derivar")
+    public ResponseEntity<IncidenteResponseDTO> derivarIncidente(
+            @PathVariable("id") String id,
+            @Valid @RequestBody DerivacionRequestDTO dto) {
+
+        IncidenteResponseDTO actualizado = incidenteService.derivarIncidente(id, dto);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    // Adjuntar evidencia posterior a una denuncia
+    @PostMapping(value = "/{id}/evidencia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<IncidenteResponseDTO> adjuntarEvidencia(
+            @PathVariable("id") String id,
+            @RequestParam("evidencia") MultipartFile archivo) {
+
+        IncidenteResponseDTO actualizado = incidenteService.adjuntarEvidencia(id, archivo);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    // Descarga y visualización inline de evidencias (imágenes/videos)
+    @GetMapping("/evidencias/{gridFsId}")
+    public ResponseEntity<Resource> descargarEvidencia(@PathVariable("gridFsId") String gridFsId) {
+        GridFsResource resource = incidenteService.obtenerRecursoEvidencia(gridFsId);
+        String contentType = resource.getContentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                .body(resource);
     }
 
     // Actualización Rápida de Estado

@@ -71,6 +71,8 @@ public class SecurityConfig {
                                                 .hasRole("ADMINISTRADOR")
 
                                                 // Módulo de Incidentes
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/incidentes/*/evidencia")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "CIUDADANO")

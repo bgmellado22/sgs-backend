@@ -11,6 +11,8 @@ import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -50,6 +52,33 @@ public class Incidente {
     private String direccionTexto;
 
     private String origen;
+
+    @Field("derivado")
+    private boolean derivado = false;
+
+    @Field("derivacion_entidad")
+    private String derivacionEntidad;
+
+    @Field("derivacion_detalle")
+    private String derivacionDetalle;
+
+    @Field("derivacion_inspector_id")
+    private String derivacionInspectorId;
+
+    @Field("derivacion_inspector_nombre")
+    private String derivacionInspectorNombre;
+
+    @Field("derivacion_observacion")
+    private String derivacionObservacion;
+
+    @Field("fecha_derivacion")
+    private LocalDateTime fechaDerivacion;
+
+    @Field("derivado_por")
+    private String derivadoPor;
+
+    @Field("evidencias")
+    private List<Evidencia> evidencias = new ArrayList<>();
 
     private boolean activo = true;
 }

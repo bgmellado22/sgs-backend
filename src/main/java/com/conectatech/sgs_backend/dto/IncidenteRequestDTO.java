@@ -25,6 +25,8 @@ public class IncidenteRequestDTO {
     @NotBlank(message = "El origen es obligatorio")
     private String origen;
 
+    private String estado;
+
     @NotNull(message = "La latitud es obligatoria")
     @Min(value = -34, message = "Latitud fuera de rango (Fuera del sector de cobertura)")
     @Max(value = -33, message = "Latitud fuera de rango (Fuera del sector de cobertura)")
