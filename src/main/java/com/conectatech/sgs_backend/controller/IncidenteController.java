@@ -70,16 +70,20 @@ public class IncidenteController {
     // Descarga y visualización inline de evidencias (imágenes/videos)
     @GetMapping("/evidencias/{gridFsId}")
     public ResponseEntity<Resource> descargarEvidencia(@PathVariable("gridFsId") String gridFsId) {
-        GridFsResource resource = incidenteService.obtenerRecursoEvidencia(gridFsId);
-        String contentType = resource.getContentType();
-        if (contentType == null || contentType.isBlank()) {
-            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
-        }
+        try {
+            GridFsResource resource = incidenteService.obtenerRecursoEvidencia(gridFsId);
+            String contentType = resource.getContentType();
+            if (contentType == null || contentType.isBlank()) {
+                contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+            }
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
-                .body(resource);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     // Actualización Rápida de Estado

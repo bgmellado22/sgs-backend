@@ -43,7 +43,8 @@ public class SecurityConfig {
                                                                 "/error",
                                                                 "/v3/api-docs/**",
                                                                 "/scalar.html",
-                                                                "/ws-notificaciones/**")
+                                                                "/ws-notificaciones/**",
+                                                                "/api/v1/incidentes/evidencias/**")
                                                 .permitAll()
 
                                                 // Módulo de Administración

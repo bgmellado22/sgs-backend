@@ -187,7 +187,13 @@ public class IncidenteService {
 
         // Obtener recurso GridFS para streaming de fotos/videos
         public GridFsResource obtenerRecursoEvidencia(String gridFsId) {
-                GridFSFile file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(gridFsId)));
+                GridFSFile file = null;
+                if (ObjectId.isValid(gridFsId)) {
+                        file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(new ObjectId(gridFsId))));
+                }
+                if (file == null) {
+                        file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(gridFsId)));
+                }
                 if (file == null) {
                         throw new RuntimeException("Evidencia no encontrada con ID: " + gridFsId);
                 }
