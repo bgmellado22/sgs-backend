@@ -13,12 +13,15 @@ import org.springframework.data.mongodb.core.mapping.Document;
  */
 @Document(collection = "sectores")
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class Sector {
     @Id
     private String id;
     private String nombre;
     private GeoJsonPoint centro;
-    private boolean activo = true;
+    private boolean activo;
+
+    public Sector() {
+        this.activo = true;
+    }
 }

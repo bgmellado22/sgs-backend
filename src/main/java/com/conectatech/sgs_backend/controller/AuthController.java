@@ -1,6 +1,5 @@
 package com.conectatech.sgs_backend.controller;
 
-import com.conectatech.sgs_backend.dto.SudoRequestDTO;
 import com.conectatech.sgs_backend.dto.auth.AuthResponse;
 import com.conectatech.sgs_backend.dto.auth.LoginRequest;
 import com.conectatech.sgs_backend.dto.auth.RegisterRequest;
@@ -47,11 +46,5 @@ public class AuthController {
         } else {
             return ResponseEntity.badRequest().body("Token inválido o expirado.");
         }
-    }
-
-    @PostMapping("/sudo")
-    public ResponseEntity<?> validarSudoMode(@RequestBody SudoRequestDTO request, Authentication authentication) {
-        authService.verificarSudo(authentication.getName(), request.getPassword());
-        return ResponseEntity.ok().build();
     }
 }

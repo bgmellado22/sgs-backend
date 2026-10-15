@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "incidentes")
 public class Incidente {
@@ -54,7 +53,7 @@ public class Incidente {
     private String origen;
 
     @Field("derivado")
-    private boolean derivado = false;
+    private boolean derivado;
 
     @Field("derivacion_entidad")
     private String derivacionEntidad;
@@ -78,7 +77,13 @@ public class Incidente {
     private String derivadoPor;
 
     @Field("evidencias")
-    private List<Evidencia> evidencias = new ArrayList<>();
+    private List<Evidencia> evidencias;
 
-    private boolean activo = true;
+    private boolean activo;
+
+    public Incidente() {
+        this.derivado = false;
+        this.evidencias = new ArrayList<>();
+        this.activo = true;
+    }
 }

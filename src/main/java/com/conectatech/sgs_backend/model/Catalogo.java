@@ -11,7 +11,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "catalogos")
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class Catalogo {
     private static final String HEX_REGEX = "^#[0-9A-Fa-f]{6}$";
@@ -39,5 +38,9 @@ public class Catalogo {
     private String categoriaAsociada;
     private String prioridadAsociada;
 
-    private boolean activo = true;
+    private boolean activo;
+
+    public Catalogo() {
+        this.activo = true;
+    }
 }

@@ -134,25 +134,6 @@ public class AuthService {
                                 .build();
         }
 
-        // Sudo mode
-        public void verificarSudo(String emailAdmin, String rawPassword) {
-                Usuario admin = usuarioRepository.findByEmail(emailAdmin)
-                                .orElseThrow(() -> new CredencialesIncorrectasException("Credenciales incorrectas."));
-
-                verificarBloqueo(admin);
-
-                if (passwordEncoder.matches(rawPassword, admin.getPassword())) {
-                        admin.setIntentosFallidos(0);
-                        admin.setBloqueadoHasta(null);
-                        usuarioRepository.save(admin);
-                } else {
-                        registrarIntentoFallido(admin);
-                        int restantes = MAX_INTENTOS - admin.getIntentosFallidos();
-                        throw new CredencialesIncorrectasException(
-                                        "Contraseña incorrecta. Intentos restantes: " + restantes);
-                }
-        }
-
         private void verificarBloqueo(Usuario usuario) {
                 if (usuario.getBloqueadoHasta() != null && usuario.getBloqueadoHasta().isAfter(LocalDateTime.now())) {
                         throw new CuentaBloqueadaException(

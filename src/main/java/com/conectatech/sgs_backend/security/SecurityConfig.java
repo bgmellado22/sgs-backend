@@ -33,9 +33,6 @@ public class SecurityConfig {
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .authorizeHttpRequests(auth -> auth
-                                                // Endpoint Sudo (Requiere autenticación previa)
-                                                .requestMatchers("/api/v1/auth/sudo").authenticated()
-
                                                 // Rutas públicas: Autenticación, Swagger y ruta interna de errores de
                                                 // Spring
                                                 .requestMatchers(
