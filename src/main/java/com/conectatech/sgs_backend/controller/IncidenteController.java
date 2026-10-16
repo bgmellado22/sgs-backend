@@ -23,6 +23,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+
 @RestController
 @RequestMapping("/api/v1/incidentes")
 @CrossOrigin(origins = { "http://localhost:5173", "https://sgs-el-tabo-frontend.vercel.app" })
@@ -35,6 +40,23 @@ public class IncidenteController {
     @GetMapping
     public ResponseEntity<List<IncidenteResponseDTO>> obtenerTodos() {
         return ResponseEntity.ok(incidenteService.obtenerTodos());
+    }
+
+    // Paginación del Servidor con Filtros Avanzados
+    @GetMapping("/paginado")
+    public ResponseEntity<Page<IncidenteResponseDTO>> obtenerIncidentesPaginado(
+            @RequestParam(required = false) String textoBusqueda,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String prioridad,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+            @PageableDefault(size = 10, sort = "fecha_creacion", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Page<IncidenteResponseDTO> pagina = incidenteService.buscarIncidentesAvanzadoPaginado(
+                textoBusqueda, categoria, tipo, estado, prioridad, fechaInicio, fechaFin, pageable);
+        return ResponseEntity.ok(pagina);
     }
 
     // Creación

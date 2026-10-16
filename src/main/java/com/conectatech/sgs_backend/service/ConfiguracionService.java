@@ -7,6 +7,7 @@ import com.conectatech.sgs_backend.repository.CatalogoRepository;
 import com.conectatech.sgs_backend.repository.ParametroSistemaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -130,6 +131,7 @@ public class ConfiguracionService {
      * @return Catálogo creado
      * @throws IllegalArgumentException si el tipo no está en la whitelist
      */
+    @CacheEvict(value = "catalogos", allEntries = true)
     public Catalogo crearCatalogo(String tipo, Catalogo catalogo) {
         String tipoNormalizado = tipo.toUpperCase();
 
@@ -167,6 +169,7 @@ public class ConfiguracionService {
      * Edita un catálogo existente.
      * Gatillo Inalterable: registra automáticamente en la bitácora.
      */
+    @CacheEvict(value = "catalogos", allEntries = true)
     public Catalogo editarCatalogo(String id, Catalogo catalogoActualizado) {
         Catalogo existente = catalogoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
@@ -265,6 +268,7 @@ public class ConfiguracionService {
      * Elimina un catálogo por su ID.
      * Gatillo Inalterable: registra automáticamente en la bitácora.
      */
+    @CacheEvict(value = "catalogos", allEntries = true)
     public void eliminarCatalogo(String id) {
         Catalogo existente = catalogoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));

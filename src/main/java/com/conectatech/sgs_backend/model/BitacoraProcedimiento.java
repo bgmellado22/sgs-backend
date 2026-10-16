@@ -21,7 +21,7 @@ public class BitacoraProcedimiento {
 
     // Relación lógica con el Incidente
     private String incidenteId;
-    
+
     // Código correlativo del incidente (ej: INC-123)
     private String codigoCorrelativo;
 

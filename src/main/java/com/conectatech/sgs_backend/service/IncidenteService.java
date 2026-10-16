@@ -25,6 +25,8 @@ import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -40,6 +42,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class IncidenteService {
+
+        private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
         private final IncidenteRepository incidenteRepository;
         private final SectorService sectorService;
         private final NotificacionWebSocketService websocketService;
@@ -73,6 +77,9 @@ public class IncidenteService {
 
                 // Procesar evidencia fotográfica si fue adjuntada
                 if (foto != null && !foto.isEmpty()) {
+                        if (foto.getSize() > MAX_FILE_SIZE_BYTES) {
+                                throw new IllegalArgumentException("La fotografía excede el tamaño máximo permitido de 10MB.");
+                        }
                         String contentType = foto.getContentType();
                         if (contentType != null && !contentType.startsWith("image/")) {
                                 throw new IllegalArgumentException("Solo se permite adjuntar imágenes (JPG, PNG, WEBP, etc.).");
@@ -152,6 +159,10 @@ public class IncidenteService {
 
                 if (archivo == null || archivo.isEmpty()) {
                         throw new IllegalArgumentException("El archivo de evidencia está vacío.");
+                }
+
+                if (archivo.getSize() > MAX_FILE_SIZE_BYTES) {
+                        throw new IllegalArgumentException("La evidencia excede el tamaño máximo permitido de 10MB.");
                 }
 
                 String contentType = archivo.getContentType();
@@ -554,6 +565,30 @@ public class IncidenteService {
                 return resultados.stream()
                                 .map(this::mapToDTO)
                                 .collect(java.util.stream.Collectors.toList());
+        }
+
+        // Método para buscar incidentes paginados con filtros avanzados
+        public Page<IncidenteResponseDTO> buscarIncidentesAvanzadoPaginado(
+                        String textoBusqueda,
+                        String categoria,
+                        String tipo,
+                        String estado,
+                        String prioridad,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin,
+                        Pageable pageable) {
+
+                Page<Incidente> resultados = incidenteRepository.buscarConFiltrosAvanzadosPaginado(
+                                textoBusqueda,
+                                categoria,
+                                tipo,
+                                estado,
+                                prioridad,
+                                fechaInicio,
+                                fechaFin,
+                                pageable);
+
+                return resultados.map(this::mapToDTO);
         }
 
         private void asignarVencimientoSla(Incidente incidente) {

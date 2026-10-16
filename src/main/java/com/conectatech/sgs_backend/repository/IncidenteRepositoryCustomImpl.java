@@ -9,6 +9,9 @@ import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.bson.Document;
 
@@ -25,8 +28,7 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
     // Meta de respaldo (48h) para incidentes creados antes de configurar los SLAs por prioridad
     private static final long SLA_POR_DEFECTO_MINUTOS = 2880;
 
-    @Override
-    public List<Incidente> buscarConFiltrosAvanzados(
+    private Query construirQueryFiltros(
             String textoBusqueda, String categoria, String tipo,
             String estado, String prioridad, LocalDateTime fechaInicio,
             LocalDateTime fechaFin) {
@@ -67,13 +69,33 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
             criterios.add(Criteria.where("fechaCreacion").lte(fechaFin));
         }
 
-        // Ensamblar y ejecutar
+        // Ensamblar
         if (!criterios.isEmpty()) {
             query.addCriteria(new Criteria().andOperator(criterios.toArray(new Criteria[0])));
         }
 
-        return mongoTemplate.find(query, Incidente.class);
+        return query;
+    }
 
+    @Override
+    public List<Incidente> buscarConFiltrosAvanzados(
+            String textoBusqueda, String categoria, String tipo,
+            String estado, String prioridad, LocalDateTime fechaInicio,
+            LocalDateTime fechaFin) {
+        Query query = construirQueryFiltros(textoBusqueda, categoria, tipo, estado, prioridad, fechaInicio, fechaFin);
+        return mongoTemplate.find(query, Incidente.class);
+    }
+
+    @Override
+    public Page<Incidente> buscarConFiltrosAvanzadosPaginado(
+            String textoBusqueda, String categoria, String tipo,
+            String estado, String prioridad, LocalDateTime fechaInicio,
+            LocalDateTime fechaFin, Pageable pageable) {
+        Query query = construirQueryFiltros(textoBusqueda, categoria, tipo, estado, prioridad, fechaInicio, fechaFin);
+        long total = mongoTemplate.count(query, Incidente.class);
+        query.with(pageable);
+        List<Incidente> resultados = mongoTemplate.find(query, Incidente.class);
+        return new PageImpl<>(resultados, pageable, total);
     }
 
     @Override

@@ -17,7 +17,6 @@ public class CatalogoController {
 
     @GetMapping("/{tipo}")
     public ResponseEntity<List<Catalogo>> obtenerCatalogo(@PathVariable String tipo) {
-        List<Catalogo> list = service.obtenerPorTipo(tipo);
         return ResponseEntity.ok(service.obtenerPorTipo(tipo));
     }
 }
