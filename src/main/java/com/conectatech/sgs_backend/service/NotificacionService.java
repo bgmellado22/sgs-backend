@@ -18,15 +18,14 @@ public class NotificacionService {
         return notificacionRepository.save(notificacion);
     }
 
-    // Obtener todo el historial de un operador específico ordenado por fecha de
-    // creación descendente
+    // Obtener todo el historial (específico del operador o global) ordenado por fecha descendente
     public List<Notificacion> obtenerNotificacionesPorUsuario(String usuarioDestinoId) {
-        return notificacionRepository.findByUsuarioDestinoIdOrderByFechaCreacionDesc(usuarioDestinoId);
+        return notificacionRepository.findByUsuarioDestinoIdInOrderByFechaCreacionDesc(List.of(usuarioDestinoId, "GLOBAL"));
     }
 
     // Obtener el número para la campana de alertas en el NavBar
     public long contarNoLeidas(String usuarioDestinoId) {
-        return notificacionRepository.countByUsuarioDestinoIdAndEstado(usuarioDestinoId, EstadoNotificacion.NO_LEIDA);
+        return notificacionRepository.countByUsuarioDestinoIdInAndEstado(List.of(usuarioDestinoId, "GLOBAL"), EstadoNotificacion.NO_LEIDA);
     }
 
     // Cambiar el estado cuando el usuario abre el menú de la campana
@@ -40,8 +39,19 @@ public class NotificacionService {
     // Marcar todas las notificaciones no leídas de un usuario como leídas
     public void marcarTodasComoLeidas(String usuarioDestinoId) {
         List<Notificacion> noLeidas = notificacionRepository
-                .findByUsuarioDestinoIdAndEstadoOrderByFechaCreacionDesc(usuarioDestinoId, EstadoNotificacion.NO_LEIDA);
+                .findByUsuarioDestinoIdInAndEstadoOrderByFechaCreacionDesc(List.of(usuarioDestinoId, "GLOBAL"), EstadoNotificacion.NO_LEIDA);
         noLeidas.forEach(n -> n.setEstado(EstadoNotificacion.LEIDA));
         notificacionRepository.saveAll(noLeidas);
+    }
+
+    // Eliminar una notificación individual
+    public void eliminarNotificacion(String notificacionId) {
+        notificacionRepository.deleteById(notificacionId);
+    }
+
+    // Limpiar todas las notificaciones de la bandeja
+    public void limpiarTodas(String usuarioDestinoId) {
+        List<Notificacion> todas = notificacionRepository.findByUsuarioDestinoIdIn(List.of(usuarioDestinoId, "GLOBAL"));
+        notificacionRepository.deleteAll(todas);
     }
 }

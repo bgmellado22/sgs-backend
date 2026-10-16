@@ -47,6 +47,20 @@ public class NotificacionController {
         return ResponseEntity.noContent().build();
     }
 
+    // Eliminar una notificación individual
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarNotificacion(@PathVariable("id") String id) {
+        notificacionService.eliminarNotificacion(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Limpiar todas las notificaciones de la bandeja
+    @DeleteMapping
+    public ResponseEntity<Void> limpiarTodas(@AuthenticationPrincipal Usuario usuarioAuth) {
+        notificacionService.limpiarTodas(usuarioAuth.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     // Endpoint de prueba
     @PostMapping
     public ResponseEntity<Notificacion> crearNotificacionPrueba(@RequestBody Notificacion notificacion) {

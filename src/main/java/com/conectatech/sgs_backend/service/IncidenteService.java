@@ -121,33 +121,17 @@ public class IncidenteService {
                         case ADMINISTRADOR -> "Administrador";
                 };
 
-                String mensajeNotificacion;
                 String comentarioBitacora;
 
                 if (actor.getRol() == com.conectatech.sgs_backend.model.enums.RolUsuario.CIUDADANO) {
-                        mensajeNotificacion = etiquetaRol + " " + actor.getNombreCompleto()
-                                        + " ha ingresado una denuncia: " + guardado.getCodigoCorrelativo();
                         comentarioBitacora = "Denuncia ingresada por ciudadano " + actor.getNombreCompleto();
                 } else {
-                        mensajeNotificacion = etiquetaRol + " " + actor.getNombreCompleto()
-                                        + " ha registrado una nueva denuncia: " + guardado.getCodigoCorrelativo();
                         comentarioBitacora = "Denuncia registrada por " + etiquetaRol.toLowerCase() + " "
                                         + actor.getNombreCompleto();
                 }
 
                 registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor, "Creación",
                                 null, "Pendiente", comentarioBitacora);
-
-                // Notificación global por WebSocket
-                Notificacion alertaCreacion = Notificacion.builder()
-                                .titulo("Nueva Denuncia")
-                                .mensaje(mensajeNotificacion)
-                                .tipo(TipoNotificacion.INFORMATIVO)
-                                .referenciaId(guardado.getId())
-                                .usuarioDestinoId("GLOBAL")
-                                .build();
-
-                websocketService.despacharAlertaGlobal(alertaCreacion);
 
                 return mapToDTO(guardado);
         }
@@ -485,18 +469,6 @@ public class IncidenteService {
 
                 Incidente actualizado = incidenteRepository.save(incidente);
 
-                // Despacho de alerta global
-                Notificacion alertaEdicion = Notificacion.builder()
-                                .titulo("Incidente Modificado")
-                                .mensaje("El operador " + actor.getNombreCompleto()
-                                                + " ha modificado los parámetros del incidente "
-                                                + actualizado.getCodigoCorrelativo())
-                                .tipo(TipoNotificacion.ALERTA)
-                                .referenciaId(actualizado.getId())
-                                .usuarioDestinoId("GLOBAL")
-                                .build();
-                websocketService.despacharAlertaGlobal(alertaEdicion);
-
                 return mapToDTO(actualizado);
         }
 
@@ -529,18 +501,6 @@ public class IncidenteService {
                                 "Activo", "Eliminado",
                                 "Denuncia eliminada por "
                                                 + actor.getNombreCompleto());
-
-                // Despacho de alerta global
-                Notificacion alertaBorrado = Notificacion.builder()
-                                .titulo("Incidente Eliminado")
-                                .mensaje("El registro " + incidenteExistente.getCodigoCorrelativo()
-                                                + " fue dado de baja por "
-                                                + actor.getNombreCompleto())
-                                .tipo(TipoNotificacion.ALERTA)
-                                .referenciaId(incidenteExistente.getId())
-                                .usuarioDestinoId("GLOBAL")
-                                .build();
-                websocketService.despacharAlertaGlobal(alertaBorrado);
         }
 
         // Método para buscar incidentes con filtros avanzados
