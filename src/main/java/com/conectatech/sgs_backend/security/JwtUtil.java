@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -19,9 +20,22 @@ import java.util.function.Function;
 
 @Component
 public class JwtUtil {
-    // Lectura de clave secreta
-    @Value("${jwt.secret}")
+    // Lectura de clave secreta desde variable de entorno
+    @Value("${jwt.secret:}")
     private String secretKey;
+
+    private Key signInKey;
+
+    @PostConstruct
+    public void init() {
+        if (secretKey != null && !secretKey.trim().isEmpty()) {
+            byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+            this.signInKey = Keys.hmacShaKeyFor(keyBytes);
+        } else {
+            // Generación de clave efímera segura en memoria para desarrollo local y tests si no hay variable de entorno
+            this.signInKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        }
+    }
 
     // Tiempo de expiración
     @Value("${jwt.expiration}")
@@ -85,7 +99,6 @@ public class JwtUtil {
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return this.signInKey;
     }
 }
