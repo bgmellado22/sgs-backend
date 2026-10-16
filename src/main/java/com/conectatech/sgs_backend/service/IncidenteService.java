@@ -52,7 +52,7 @@ public class IncidenteService {
                 return crearIncidente(dto, null);
         }
 
-        // Guardar con soporte de evidencia (foto / video)
+        // Guardar con soporte de evidencia fotográfica (imagen)
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto, MultipartFile foto) {
                 Incidente incidente = new Incidente();
 
@@ -71,13 +71,17 @@ public class IncidenteService {
 
                 asignarVencimientoSla(incidente);
 
-                // Procesar evidencia fotográfica/video si fue adjuntada
+                // Procesar evidencia fotográfica si fue adjuntada
                 if (foto != null && !foto.isEmpty()) {
+                        String contentType = foto.getContentType();
+                        if (contentType != null && !contentType.startsWith("image/")) {
+                                throw new IllegalArgumentException("Solo se permite adjuntar imágenes (JPG, PNG, WEBP, etc.).");
+                        }
                         try {
                                 ObjectId fileId = gridFsTemplate.store(
                                         foto.getInputStream(),
                                         foto.getOriginalFilename(),
-                                        foto.getContentType()
+                                        contentType
                                 );
                                 Evidencia evidencia = Evidencia.builder()
                                         .id(fileId.toHexString())
@@ -141,7 +145,7 @@ public class IncidenteService {
                 return mapToDTO(guardado);
         }
 
-        // Adjuntar evidencia posterior a una denuncia existente
+        // Adjuntar evidencia fotográfica posterior a una denuncia existente
         public IncidenteResponseDTO adjuntarEvidencia(String id, MultipartFile archivo) {
                 Incidente incidente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new RuntimeException("Incidente no encontrado: " + id));
@@ -150,11 +154,16 @@ public class IncidenteService {
                         throw new IllegalArgumentException("El archivo de evidencia está vacío.");
                 }
 
+                String contentType = archivo.getContentType();
+                if (contentType != null && !contentType.startsWith("image/")) {
+                        throw new IllegalArgumentException("Solo se permite adjuntar imágenes (JPG, PNG, WEBP, etc.).");
+                }
+
                 try {
                         ObjectId fileId = gridFsTemplate.store(
                                 archivo.getInputStream(),
                                 archivo.getOriginalFilename(),
-                                archivo.getContentType()
+                                contentType
                         );
                         Evidencia evidencia = Evidencia.builder()
                                 .id(fileId.toHexString())
@@ -176,7 +185,7 @@ public class IncidenteService {
                         Usuario actor = (Usuario) auth.getPrincipal();
                         registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
                                         "Evidencia", "Adjunto previo", archivo.getOriginalFilename(),
-                                        "Carga de evidencia multimedia (" + archivo.getContentType() + ")");
+                                        "Carga de evidencia fotográfica (" + contentType + ")");
 
                         return mapToDTO(guardado);
                 } catch (IOException e) {
@@ -185,7 +194,7 @@ public class IncidenteService {
                 }
         }
 
-        // Obtener recurso GridFS para streaming de fotos/videos
+        // Obtener recurso GridFS para visualización de fotografías
         public GridFsResource obtenerRecursoEvidencia(String gridFsId) {
                 GridFSFile file = null;
                 if (ObjectId.isValid(gridFsId)) {
@@ -419,6 +428,26 @@ public class IncidenteService {
                                         incidente.getTipo(), dto.getTipo(),
                                         "Edición de tipo por parte de " + actor.getNombreCompleto());
                         incidente.setTipo(dto.getTipo());
+                }
+
+                // Auditar y Actualizar Descripción
+                if (dto.getDescripcion() != null && !dto.getDescripcion().equals(incidente.getDescripcion())) {
+                        registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Descripción",
+                                        incidente.getDescripcion(), dto.getDescripcion(),
+                                        "Edición de descripción por parte de " + actor.getNombreCompleto());
+                        incidente.setDescripcion(dto.getDescripcion());
+                }
+
+                // Auditar y Actualizar Ubicación
+                if (dto.getLatitud() != null && dto.getLongitud() != null) {
+                        GeoJsonPoint puntoGPS = new GeoJsonPoint(dto.getLongitud(), dto.getLatitud());
+                        incidente.setLocation(puntoGPS);
+                }
+                if (dto.getDireccionTexto() != null && !dto.getDireccionTexto().equals(incidente.getDireccionTexto())) {
+                        registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Dirección",
+                                        incidente.getDireccionTexto(), dto.getDireccionTexto(),
+                                        "Edición de dirección por parte de " + actor.getNombreCompleto());
+                        incidente.setDireccionTexto(dto.getDireccionTexto());
                 }
 
                 // Auditar y Actualizar Estado si fue modificado en la edición

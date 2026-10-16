@@ -67,7 +67,7 @@ public class IncidenteController {
         return ResponseEntity.ok(actualizado);
     }
 
-    // Descarga y visualización inline de evidencias (imágenes/videos)
+    // Descarga y visualización inline de evidencias (imágenes)
     @GetMapping("/evidencias/{gridFsId}")
     public ResponseEntity<Resource> descargarEvidencia(@PathVariable("gridFsId") String gridFsId) {
         try {
