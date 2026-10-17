@@ -25,9 +25,10 @@ public class ConfiguracionService {
     private final AuditoriaService auditoriaService;
 
     /**
-     * Tipos de catálogo permitidos para creación dinámica.
+     * Tipos de catálogo administrables dinámicamente.
+     * Prioridad y Categoría son estándares fijos inmutables.
      */
-    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "PRIORIDAD", "CATEGORIA", "TIPO_EVENTO");
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "TIPO_EVENTO");
 
     /**
      * Etiquetas legibles para el mensaje de auditoría por tipo.
@@ -174,6 +175,10 @@ public class ConfiguracionService {
         Catalogo existente = catalogoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
 
+        if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
+            throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo() + " son inmutables por defecto y no pueden modificarse.");
+        }
+
         String etiquetaAnterior = existente.getEtiqueta();
         String visualAnterior = describirVisual(existente);
         boolean estadoAnterior = existente.isActivo();
@@ -193,6 +198,12 @@ public class ConfiguracionService {
         }
         if (catalogoActualizado.getColorBg() != null) {
             existente.setColorBg(catalogoActualizado.getColorBg());
+        }
+        if (catalogoActualizado.getCategoriaAsociada() != null) {
+            existente.setCategoriaAsociada(catalogoActualizado.getCategoriaAsociada());
+        }
+        if (catalogoActualizado.getPrioridadAsociada() != null) {
+            existente.setPrioridadAsociada(catalogoActualizado.getPrioridadAsociada());
         }
 
         Catalogo guardado = catalogoRepository.save(existente);
@@ -272,6 +283,10 @@ public class ConfiguracionService {
     public void eliminarCatalogo(String id) {
         Catalogo existente = catalogoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
+
+        if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
+            throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo() + " son inmutables por defecto y no pueden eliminarse.");
+        }
 
         catalogoRepository.delete(existente);
 
