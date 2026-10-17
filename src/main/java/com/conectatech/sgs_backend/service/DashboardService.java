@@ -65,10 +65,15 @@ public class DashboardService {
                 ? null
                 : redondear((double) (semanaActual - semanaAnterior) / semanaAnterior * 100);
 
-        List<FranjaHoraria> franjas = construirFranjas(aMapa(resultado, "horas"));
+        Map<String, Catalogo> catalogoPrioridades = catalogoRepository.findByTipoAndActivoTrue("PRIORIDAD").stream()
+                .collect(Collectors.toMap(c -> c.getValor().toUpperCase(), Function.identity(), (a, b) -> a));
+
+        List<FranjaHoraria> franjas = construirFranjas(resultado, catalogoPrioridades);
         FranjaHoraria franjaCritica = franjas.stream()
                 .filter(f -> f.getCantidad() > 0)
-                .max(Comparator.comparingLong(FranjaHoraria::getCantidad))
+                .max(Comparator.comparingLong(FranjaHoraria::getScore)
+                        .thenComparingLong(FranjaHoraria::getAlta)
+                        .thenComparingLong(FranjaHoraria::getCantidad))
                 .orElse(null);
 
         return DashboardEstadisticasDTO.builder()
@@ -83,7 +88,7 @@ public class DashboardService {
                 .tendenciaSemanal(construirTendencia(aMapa(resultado, "dias"), inicioSemana))
                 .distribucionHoraria(franjas)
                 .franjaCritica(franjaCritica)
-                .hotspots(construirHotspots(desde))
+                .hotspots(construirHotspots(desde, catalogoPrioridades))
                 .distribucionCategorias(construirCategorias(aMapa(resultado, "categorias")))
                 .build();
     }
@@ -110,7 +115,10 @@ public class DashboardService {
                                 new Document(fechaHoraLocal).append("format", "%Y-%m-%d")))))
                 .append("horas", List.of(
                         enSemanaActual,
-                        agruparPor(new Document("$hour", fechaHoraLocal))));
+                        new Document("$group", new Document("_id",
+                                new Document("hora", new Document("$hour", fechaHoraLocal))
+                                        .append("prioridad", "$prioridad"))
+                                .append("cantidad", new Document("$sum", 1)))));
 
         List<Document> pipeline = List.of(
                 new Document("$match", new Document("activo", true)),
@@ -153,34 +161,61 @@ public class DashboardService {
     }
 
     /**
-     * Agrupa las 24 horas en cuatro franjas de 6 horas.
+     * Agrupa las 24 horas en cuatro franjas de 6 horas, con desglose por prioridad.
      */
-    private List<FranjaHoraria> construirFranjas(Map<String, Long> porHora) {
-        long[] cantidades = new long[4];
-        porHora.forEach((hora, cantidad) -> {
-            if (!"null".equals(hora)) {
-                cantidades[Integer.parseInt(hora) / 6] += cantidad;
+    private List<FranjaHoraria> construirFranjas(Document resultado, Map<String, Catalogo> catalogoPrioridades) {
+        long[] totales = new long[4];
+        long[] altas = new long[4];
+        long[] medias = new long[4];
+        long[] bajas = new long[4];
+
+        for (Document fila : resultado.getList("horas", Document.class, List.of())) {
+            Object idObj = fila.get("_id");
+            Integer hora = null;
+            String prioridadRaw = null;
+
+            if (idObj instanceof Document idDoc) {
+                hora = idDoc.getInteger("hora");
+                prioridadRaw = idDoc.getString("prioridad");
+            } else if (idObj != null && !"null".equals(String.valueOf(idObj))) {
+                try {
+                    hora = Integer.parseInt(String.valueOf(idObj));
+                } catch (NumberFormatException ignored) {
+                }
             }
-        });
+
+            if (hora != null) {
+                int idx = Math.min(3, Math.max(0, hora / 6));
+                long cantidad = ((Number) fila.get("cantidad")).longValue();
+                totales[idx] += cantidad;
+
+                String norm = normalizarPrioridad(prioridadRaw, catalogoPrioridades);
+                switch (norm) {
+                    case "ALTA" -> altas[idx] += cantidad;
+                    case "MEDIA" -> medias[idx] += cantidad;
+                    case "BAJA" -> bajas[idx] += cantidad;
+                }
+            }
+        }
 
         return List.of(
-                new FranjaHoraria("MADRUGADA", "Madrugada", "00:00 - 06:00", cantidades[0]),
-                new FranjaHoraria("MANANA", "Mañana", "06:00 - 12:00", cantidades[1]),
-                new FranjaHoraria("TARDE", "Tarde", "12:00 - 18:00", cantidades[2]),
-                new FranjaHoraria("NOCHE", "Noche", "18:00 - 00:00", cantidades[3]));
+                new FranjaHoraria("MADRUGADA", "Madrugada", "00:00 - 06:00", totales[0], altas[0], medias[0], bajas[0]),
+                new FranjaHoraria("MANANA", "Mañana", "06:00 - 12:00", totales[1], altas[1], medias[1], bajas[1]),
+                new FranjaHoraria("TARDE", "Tarde", "12:00 - 18:00", totales[2], altas[2], medias[2], bajas[2]),
+                new FranjaHoraria("NOCHE", "Noche", "18:00 - 00:00", totales[3], altas[3], medias[3], bajas[3]));
     }
 
     /**
-     * Ranking de sectores de la última semana. La asignación al sector más cercano
-     * se resuelve en memoria, ya que los sectores son puntos y no polígonos.
+     * Ranking de sectores de la última semana con desglose de prioridades.
+     * La asignación al sector más cercano se resuelve en memoria, ya que los sectores son puntos.
      */
-    private List<Hotspot> construirHotspots(Date desde) {
+    private List<Hotspot> construirHotspots(Date desde, Map<String, Catalogo> catalogoPrioridades) {
         List<Sector> sectores = sectorService.obtenerActivos();
-        Map<String, Long> porSector = new HashMap<>();
+        Map<String, long[]> porSector = new HashMap<>(); // [total, alta, media, baja]
 
         mongoTemplate.getCollection("incidentes")
                 .find(Filters.and(Filters.eq("activo", true), Filters.gte("fecha_creacion", desde)))
-                .projection(Projections.include("location"))
+                .projection(Projections.include("location", "prioridad"))
                 .forEach(doc -> {
                     Double longitud = null;
                     Double latitud = null;
@@ -193,13 +228,48 @@ public class DashboardService {
                         }
                     }
                     String sector = sectorService.resolverSector(longitud, latitud, sectores);
-                    porSector.merge(sector, 1L, Long::sum);
+                    String prioridad = normalizarPrioridad(doc.getString("prioridad"), catalogoPrioridades);
+
+                    long[] contadores = porSector.computeIfAbsent(sector, k -> new long[4]);
+                    contadores[0]++;
+                    switch (prioridad) {
+                        case "ALTA" -> contadores[1]++;
+                        case "MEDIA" -> contadores[2]++;
+                        case "BAJA" -> contadores[3]++;
+                    }
                 });
 
         return porSector.entrySet().stream()
-                .map(e -> new Hotspot(e.getKey(), e.getValue()))
-                .sorted(Comparator.comparingLong(Hotspot::getCantidad).reversed())
+                .map(e -> {
+                    long total = e.getValue()[0];
+                    long alta = e.getValue()[1];
+                    long media = e.getValue()[2];
+                    long baja = e.getValue()[3];
+                    long score = (alta * 10L) + (media * 3L) + (baja * 1L);
+                    return new Hotspot(e.getKey(), total, alta, media, baja, score);
+                })
+                .sorted(Comparator.comparingLong(Hotspot::getScore)
+                        .thenComparingLong(Hotspot::getAlta)
+                        .thenComparingLong(Hotspot::getCantidad)
+                        .reversed())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Normaliza la prioridad a una de las tres categorías visuales: ALTA, MEDIA o BAJA.
+     */
+    private String normalizarPrioridad(String prioridadRaw, Map<String, Catalogo> catalogoPrioridades) {
+        if (prioridadRaw == null) return "BAJA";
+        String key = prioridadRaw.trim().toUpperCase();
+        Catalogo cat = catalogoPrioridades.get(key);
+        if (cat != null) {
+            if (cat.getNivelOrden() >= 3) return "ALTA";
+            if (cat.getNivelOrden() == 2) return "MEDIA";
+            return "BAJA";
+        }
+        if (key.contains("ALTA") || key.contains("CRITICA") || key.contains("URGENT")) return "ALTA";
+        if (key.contains("MEDIA") || key.contains("MODERAD")) return "MEDIA";
+        return "BAJA";
     }
 
     /**

@@ -14,10 +14,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.bson.Document;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -155,29 +159,69 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(criteria),
-                Aggregation.group()
-                        .count().as("volumenOperativoTotal")
-                        .sum(sumExpr).as("casosResueltos")
-                        .sum(sumTiempoRespuestaExpr).as("casosTiempoRespuesta")
-                        .sum(sumCritExpr).as("casosCriticos"));
+                Aggregation.facet(
+                        Aggregation.group()
+                                .count().as("volumenOperativoTotal")
+                                .sum(sumExpr).as("casosResueltos")
+                                .sum(sumTiempoRespuestaExpr).as("casosTiempoRespuesta")
+                                .sum(sumCritExpr).as("casosCriticos")
+                ).as("kpis")
+                .and(
+                        Aggregation.group("categoria").count().as("cantidad"),
+                        Aggregation.sort(Sort.Direction.DESC, "cantidad")
+                ).as("categorias")
+        );
 
         AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "incidentes", Document.class);
         Document resultDoc = results.getUniqueMappedResult();
 
         if (resultDoc == null) {
-            return new ReporteKpiDTO(0L, 0.0, 0.0, 0.0);
+            return new ReporteKpiDTO(0L, 0.0, 0.0, 0.0, new ArrayList<>());
         }
 
-        long total = resultDoc.getInteger("volumenOperativoTotal", 0);
-        long resueltos = resultDoc.getInteger("casosResueltos", 0);
-        long casosTiempoRespuesta = resultDoc.getInteger("casosTiempoRespuesta", 0);
-        long casosCriticos = resultDoc.getInteger("casosCriticos", 0);
+        List<Document> kpisList = resultDoc.getList("kpis", Document.class);
+        Document kpiDoc = (kpisList != null && !kpisList.isEmpty()) ? kpisList.get(0) : null;
+
+        long total = kpiDoc != null ? ((Number) kpiDoc.getOrDefault("volumenOperativoTotal", 0)).longValue() : 0L;
+        long resueltos = kpiDoc != null ? ((Number) kpiDoc.getOrDefault("casosResueltos", 0)).longValue() : 0L;
+        long casosTiempoRespuesta = kpiDoc != null ? ((Number) kpiDoc.getOrDefault("casosTiempoRespuesta", 0)).longValue() : 0L;
+        long casosCriticos = kpiDoc != null ? ((Number) kpiDoc.getOrDefault("casosCriticos", 0)).longValue() : 0L;
 
         double tasa = (total == 0) ? 0.0 : Math.round(((double) resueltos / total) * 100.0 * 10.0) / 10.0;
         double cumplimientoTiempoRespuesta = (resueltos == 0) ? 0.0 : Math.round(((double) casosTiempoRespuesta / resueltos) * 100.0 * 10.0) / 10.0;
         double indiceCriticidad = (total == 0) ? 0.0 : Math.round(((double) casosCriticos / total) * 100.0 * 10.0) / 10.0;
 
-        return new ReporteKpiDTO(total, tasa, cumplimientoTiempoRespuesta, indiceCriticidad);
+        // Mapear categorías con etiquetas y colores del catálogo
+        Map<String, Catalogo> catalogoMap = obtenerCatalogoCategorias();
+        List<Document> categoriasDocs = resultDoc.getList("categorias", Document.class);
+        List<ReporteKpiDTO.CategoriaDistribucion> distribucionCategorias = new ArrayList<>();
+
+        if (categoriasDocs != null) {
+            for (Document catDoc : categoriasDocs) {
+                Object idObj = catDoc.get("_id");
+                String valor = (idObj == null || "null".equals(idObj)) ? null : String.valueOf(idObj);
+                long cantidad = ((Number) catDoc.getOrDefault("cantidad", 0)).longValue();
+                Catalogo item = valor != null ? catalogoMap.get(valor) : null;
+                String etiqueta = item != null ? item.getEtiqueta() : (valor != null ? valor : "Sin categoría");
+                String colorHex = item != null ? item.getColorHex() : null;
+                Integer nivelOrden = item != null ? item.getNivelOrden() : 0;
+                distribucionCategorias.add(new ReporteKpiDTO.CategoriaDistribucion(valor, etiqueta, colorHex, cantidad, nivelOrden));
+            }
+        }
+
+        return new ReporteKpiDTO(total, tasa, cumplimientoTiempoRespuesta, indiceCriticidad, distribucionCategorias);
+    }
+
+    /**
+     * Catálogo activo de categorías para enriquecer las etiquetas y colores de la distribución.
+     */
+    private Map<String, Catalogo> obtenerCatalogoCategorias() {
+        List<Catalogo> categorias = mongoTemplate.find(
+                Query.query(Criteria.where("tipo").is("CATEGORIA").and("activo").is(true)),
+                Catalogo.class);
+        return categorias.stream()
+                .filter(c -> c.getValor() != null)
+                .collect(Collectors.toMap(Catalogo::getValor, Function.identity(), (a, b) -> a));
     }
 
     /**

@@ -52,6 +52,18 @@ public class DashboardEstadisticasDTO {
         private String etiqueta; // Ej: "Noche"
         private String rango;    // Ej: "18:00 - 00:00"
         private long cantidad;
+        private long alta;
+        private long media;
+        private long baja;
+        private long score;
+
+        public FranjaHoraria(String franja, String etiqueta, String rango, long cantidad) {
+            this(franja, etiqueta, rango, cantidad, 0L, 0L, 0L, 0L);
+        }
+
+        public FranjaHoraria(String franja, String etiqueta, String rango, long cantidad, long alta, long media, long baja) {
+            this(franja, etiqueta, rango, cantidad, alta, media, baja, (alta * 10L) + (media * 3L) + (baja * 1L));
+        }
     }
 
     @Data
@@ -60,6 +72,18 @@ public class DashboardEstadisticasDTO {
     public static class Hotspot {
         private String sector;
         private long cantidad;
+        private long alta;
+        private long media;
+        private long baja;
+        private long score;
+
+        public Hotspot(String sector, long cantidad) {
+            this(sector, cantidad, 0L, 0L, 0L, 0L);
+        }
+
+        public Hotspot(String sector, long cantidad, long alta, long media, long baja) {
+            this(sector, cantidad, alta, media, baja, (alta * 10L) + (media * 3L) + (baja * 1L));
+        }
     }
 
     @Data
