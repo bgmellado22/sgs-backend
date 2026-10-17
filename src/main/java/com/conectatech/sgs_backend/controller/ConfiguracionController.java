@@ -27,7 +27,7 @@ public class ConfiguracionController {
 
     /**
      * GET /api/v1/configuracion/parametros
-     * Retorna todos los parámetros del sistema (SLAs, etc.)
+     * Retorna todos los parámetros del sistema (Tiempos de Respuesta, etc.)
      */
     @GetMapping("/parametros")
     public ResponseEntity<List<ParametroSistema>> obtenerParametros() {

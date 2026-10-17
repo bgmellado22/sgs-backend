@@ -93,31 +93,32 @@ public class IncidenteService {
                         incidente.setEsAnonimo(dto.getEsAnonimo() != null ? dto.getEsAnonimo() : true);
                 }
 
-                asignarVencimientoSla(incidente);
+                asignarVencimientoTiempoRespuesta(incidente);
 
                 // Procesar evidencia fotográfica si fue adjuntada
                 if (foto != null && !foto.isEmpty()) {
                         if (foto.getSize() > MAX_FILE_SIZE_BYTES) {
-                                throw new IllegalArgumentException("La fotografía excede el tamaño máximo permitido de 10MB.");
+                                throw new IllegalArgumentException(
+                                                "La fotografía excede el tamaño máximo permitido de 10MB.");
                         }
                         String contentType = foto.getContentType();
                         if (contentType != null && !contentType.startsWith("image/")) {
-                                throw new IllegalArgumentException("Solo se permite adjuntar imágenes (JPG, PNG, WEBP, etc.).");
+                                throw new IllegalArgumentException(
+                                                "Solo se permite adjuntar imágenes (JPG, PNG, WEBP, etc.).");
                         }
                         try {
                                 ObjectId fileId = gridFsTemplate.store(
-                                        foto.getInputStream(),
-                                        foto.getOriginalFilename(),
-                                        contentType
-                                );
+                                                foto.getInputStream(),
+                                                foto.getOriginalFilename(),
+                                                contentType);
                                 Evidencia evidencia = Evidencia.builder()
-                                        .id(fileId.toHexString())
-                                        .nombre(foto.getOriginalFilename())
-                                        .tipo(foto.getContentType())
-                                        .tamano(foto.getSize())
-                                        .url("/api/v1/incidentes/evidencias/" + fileId.toHexString())
-                                        .fechaCarga(LocalDateTime.now())
-                                        .build();
+                                                .id(fileId.toHexString())
+                                                .nombre(foto.getOriginalFilename())
+                                                .tipo(foto.getContentType())
+                                                .tamano(foto.getSize())
+                                                .url("/api/v1/incidentes/evidencias/" + fileId.toHexString())
+                                                .fechaCarga(LocalDateTime.now())
+                                                .build();
                                 if (incidente.getEvidencias() == null) {
                                         incidente.setEvidencias(new ArrayList<>());
                                 }
@@ -176,18 +177,17 @@ public class IncidenteService {
 
                 try {
                         ObjectId fileId = gridFsTemplate.store(
-                                archivo.getInputStream(),
-                                archivo.getOriginalFilename(),
-                                contentType
-                        );
+                                        archivo.getInputStream(),
+                                        archivo.getOriginalFilename(),
+                                        contentType);
                         Evidencia evidencia = Evidencia.builder()
-                                .id(fileId.toHexString())
-                                .nombre(archivo.getOriginalFilename())
-                                .tipo(archivo.getContentType())
-                                .tamano(archivo.getSize())
-                                .url("/api/v1/incidentes/evidencias/" + fileId.toHexString())
-                                .fechaCarga(LocalDateTime.now())
-                                .build();
+                                        .id(fileId.toHexString())
+                                        .nombre(archivo.getOriginalFilename())
+                                        .tipo(archivo.getContentType())
+                                        .tamano(archivo.getSize())
+                                        .url("/api/v1/incidentes/evidencias/" + fileId.toHexString())
+                                        .fechaCarga(LocalDateTime.now())
+                                        .build();
 
                         if (incidente.getEvidencias() == null) {
                                 incidente.setEvidencias(new ArrayList<>());
@@ -245,7 +245,8 @@ public class IncidenteService {
                 incidente.setFechaDerivacion(LocalDateTime.now());
                 incidente.setDerivadoPor(actor.getNombreCompleto());
 
-                // Si la denuncia estaba "Pendiente", la derivación inicia la gestión ("En proceso")
+                // Si la denuncia estaba "Pendiente", la derivación inicia la gestión ("En
+                // proceso")
                 String estadoAnterior = incidente.getEstado();
                 if ("Pendiente".equalsIgnoreCase(estadoAnterior)) {
                         incidente.setEstado("En proceso");
@@ -257,15 +258,22 @@ public class IncidenteService {
                 Incidente guardado = incidenteRepository.save(incidente);
 
                 String valorNuevoAuditoria = dto.getEntidad().equalsIgnoreCase("CARABINEROS")
-                                ? "Carabineros de Chile" + (dto.getDetalle() != null && !dto.getDetalle().isBlank() ? " (" + dto.getDetalle() + ")" : "")
-                                : "Seguridad Municipal" + (dto.getInspectorNombre() != null && !dto.getInspectorNombre().isBlank() ? " (" + dto.getInspectorNombre() + ")" : "");
+                                ? "Carabineros de Chile" + (dto.getDetalle() != null && !dto.getDetalle().isBlank()
+                                                ? " (" + dto.getDetalle() + ")"
+                                                : "")
+                                : "Seguridad Municipal" + (dto.getInspectorNombre() != null
+                                                && !dto.getInspectorNombre().isBlank()
+                                                                ? " (" + dto.getInspectorNombre() + ")"
+                                                                : "");
 
                 registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
                                 "Derivación Operativa", entidadAnterior, valorNuevoAuditoria,
-                                dto.getObservacion() != null && !dto.getObservacion().isBlank() ? dto.getObservacion() : "Derivación ejecutada desde panel de gestión");
+                                dto.getObservacion() != null && !dto.getObservacion().isBlank() ? dto.getObservacion()
+                                                : "Derivación ejecutada desde panel de gestión");
 
                 // Notificación global por WebSocket
-                String destinatario = dto.getEntidad().equalsIgnoreCase("CARABINEROS") ? "Carabineros de Chile" : "Seguridad Municipal";
+                String destinatario = dto.getEntidad().equalsIgnoreCase("CARABINEROS") ? "Carabineros de Chile"
+                                : "Seguridad Municipal";
                 Notificacion alertaDerivacion = Notificacion.builder()
                                 .titulo("Incidente Derivado")
                                 .mensaje("El operador " + actor.getNombreCompleto() + " derivó el incidente "
@@ -300,8 +308,8 @@ public class IncidenteService {
                 dto.setFechaCreacion(incidente.getFechaCreacion());
                 dto.setFechaCierre(incidente.getFechaCierre());
                 dto.setTiempoResolucionMinutos(incidente.getTiempoResolucionMinutos());
-                dto.setSlaMinutosObjetivo(incidente.getSlaMinutosObjetivo());
-                dto.setFechaVencimientoSla(incidente.getFechaVencimientoSla());
+                dto.setTiempoRespuestaMinutosObjetivo(incidente.getTiempoRespuestaMinutosObjetivo());
+                dto.setFechaVencimientoTiempoRespuesta(incidente.getFechaVencimientoTiempoRespuesta());
                 dto.setOrigen(incidente.getOrigen());
                 // Extraer coordenadas del geojsonpoint de mongodb
                 if (incidente.getLocation() != null) {
@@ -322,7 +330,8 @@ public class IncidenteService {
                 dto.setDerivadoPor(incidente.getDerivadoPor());
 
                 // Evidencias Multimedia
-                dto.setEvidencias(incidente.getEvidencias() != null ? incidente.getEvidencias() : Collections.emptyList());
+                dto.setEvidencias(incidente.getEvidencias() != null ? incidente.getEvidencias()
+                                : Collections.emptyList());
 
                 // Datos del Denunciante
                 if (incidente.getDenunciante() != null) {
@@ -383,7 +392,8 @@ public class IncidenteService {
                 if ("Resuelto".equals(nuevoEstado) || "Cerrado".equals(nuevoEstado)) {
                         if (incidenteExistente.getFechaCierre() == null) {
                                 incidenteExistente.setFechaCierre(LocalDateTime.now());
-                                long minutos = ChronoUnit.MINUTES.between(incidenteExistente.getFechaCreacion(), incidenteExistente.getFechaCierre());
+                                long minutos = ChronoUnit.MINUTES.between(incidenteExistente.getFechaCreacion(),
+                                                incidenteExistente.getFechaCierre());
                                 incidenteExistente.setTiempoResolucionMinutos(minutos);
                         }
                 } else {
@@ -431,9 +441,9 @@ public class IncidenteService {
                                         incidente.getPrioridad(), dto.getPrioridad(),
                                         "Edición de prioridad por parte de " + actor.getNombreCompleto());
                         incidente.setPrioridad(dto.getPrioridad());
-                        
-                        // Recalcular SLA si cambia la prioridad
-                        asignarVencimientoSla(incidente);
+
+                        // Recalcular Tiempo de Respuesta si cambia la prioridad
+                        asignarVencimientoTiempoRespuesta(incidente);
                 }
 
                 // Auditar y Actualizar Origen
@@ -489,7 +499,8 @@ public class IncidenteService {
                         if ("Resuelto".equals(nuevoEstado) || "Cerrado".equals(nuevoEstado)) {
                                 if (incidente.getFechaCierre() == null) {
                                         incidente.setFechaCierre(LocalDateTime.now());
-                                        long minutos = ChronoUnit.MINUTES.between(incidente.getFechaCreacion(), incidente.getFechaCierre());
+                                        long minutos = ChronoUnit.MINUTES.between(incidente.getFechaCreacion(),
+                                                        incidente.getFechaCierre());
                                         incidente.setTiempoResolucionMinutos(minutos);
                                 }
                         } else {
@@ -604,23 +615,27 @@ public class IncidenteService {
                 return resultados.map(this::mapToDTO);
         }
 
-        private void asignarVencimientoSla(Incidente incidente) {
-                if (incidente.getPrioridad() == null) return;
-                
-                String claveSla = "SLA_" + incidente.getPrioridad().toUpperCase() + "_MINUTOS";
-                parametroRepository.findByClave(claveSla).ifPresent(param -> {
-                        try {
-                                long minutos = Long.parseLong(param.getValor());
-                                incidente.setSlaMinutosObjetivo(minutos);
-                                
-                                LocalDateTime baseTime = incidente.getFechaCreacion() != null 
-                                        ? incidente.getFechaCreacion() 
-                                        : LocalDateTime.now();
-                                        
-                                incidente.setFechaVencimientoSla(baseTime.plusMinutes(minutos));
-                        } catch (NumberFormatException e) {
-                                // Ignorar si el formato es incorrecto
-                        }
-                });
+        private void asignarVencimientoTiempoRespuesta(Incidente incidente) {
+                if (incidente.getPrioridad() == null)
+                        return;
+
+                String claveTiempoRespuesta = "TIEMPO_RESPUESTA_" + incidente.getPrioridad().toUpperCase() + "_MINUTOS";
+                String claveLegacy = "SLA_" + incidente.getPrioridad().toUpperCase() + "_MINUTOS";
+                parametroRepository.findByClave(claveTiempoRespuesta)
+                                .or(() -> parametroRepository.findByClave(claveLegacy))
+                                .ifPresent(param -> {
+                                        try {
+                                                long minutos = Long.parseLong(param.getValor());
+                                                incidente.setTiempoRespuestaMinutosObjetivo(minutos);
+
+                                                LocalDateTime baseTime = incidente.getFechaCreacion() != null
+                                                                ? incidente.getFechaCreacion()
+                                                                : LocalDateTime.now();
+
+                                                incidente.setFechaVencimientoTiempoRespuesta(baseTime.plusMinutes(minutos));
+                                        } catch (NumberFormatException e) {
+                                                // Ignorar si el formato es incorrecto
+                                        }
+                                });
         }
 }

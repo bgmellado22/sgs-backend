@@ -40,7 +40,7 @@ public class ConfiguracionService {
     );
 
     // ──────────────────────────────────────────────
-    //  PARÁMETROS DEL SISTEMA (SLAs y otros)
+    //  PARÁMETROS DEL SISTEMA (Tiempos de Respuesta y otros)
     // ──────────────────────────────────────────────
 
     /**
@@ -69,14 +69,14 @@ public class ConfiguracionService {
             
             String accion = esNuevo ? "CREACIÓN" : "MODIFICACIÓN";
             String mensaje = String.format(
-                    "El Administrador %s ha realizado una %s en el SLA/Parámetro: %s (Nuevo valor: %s)",
+                    "El Administrador %s ha realizado una %s en el Parámetro de Tiempo de Respuesta: %s (Nuevo valor: %s)",
                     admin != null ? admin.getNombreCompleto() : "Sistema",
                     accion,
                     clave,
                     valor
             );
 
-            String codigoBitacora = esNuevo ? "SLA_CREACION" : "SLA_MODIFICACION";
+            String codigoBitacora = esNuevo ? "TIEMPO_RESPUESTA_CREACION" : "TIEMPO_RESPUESTA_MODIFICACION";
             auditoriaService.registrarAuditoria(codigoBitacora, valorAnterior, valor, mensaje);
         });
         return parametroSistemaRepository.findAll();
@@ -96,13 +96,13 @@ public class ConfiguracionService {
         Usuario admin = auditoriaService.getUsuarioActual();
 
         String mensaje = String.format(
-                "El Administrador %s ha eliminado el SLA/Parámetro: %s (Valor anterior: %s)",
+                "El Administrador %s ha eliminado el Parámetro de Tiempo de Respuesta: %s (Valor anterior: %s)",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 parametro.getClave(),
                 parametro.getValor()
         );
 
-        auditoriaService.registrarAuditoria("SLA_ELIMINACION", parametro.getValor(), "ELIMINADO", mensaje);
+        auditoriaService.registrarAuditoria("TIEMPO_RESPUESTA_ELIMINACION", parametro.getValor(), "ELIMINADO", mensaje);
     }
 
     // ──────────────────────────────────────────────

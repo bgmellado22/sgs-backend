@@ -25,8 +25,8 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
     private final MongoTemplate mongoTemplate;
 
-    // Meta de respaldo (48h) para incidentes creados antes de configurar los SLAs por prioridad
-    private static final long SLA_POR_DEFECTO_MINUTOS = 2880;
+    // Meta de respaldo (48h) para incidentes creados antes de configurar los tiempos de respuesta por prioridad
+    private static final long TIEMPO_RESPUESTA_POR_DEFECTO_MINUTOS = 2880;
 
     private Query construirQueryFiltros(
             String textoBusqueda, String categoria, String tipo,
@@ -129,15 +129,17 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
                 .append("then", 1)
                 .append("else", 0));
 
-        org.springframework.data.mongodb.core.aggregation.AggregationExpression sumSlaExpr = context -> 
+        org.springframework.data.mongodb.core.aggregation.AggregationExpression sumTiempoRespuestaExpr = context -> 
                 new Document("$cond", new Document("if", 
                         new Document("$and", java.util.Arrays.asList(
                                 new Document("$in", java.util.Arrays.asList("$estado", java.util.Arrays.asList("Resuelto", "Cerrado"))),
                                 new Document("$ne", java.util.Arrays.asList("$tiempo_resolucion_minutos", null)),
-                                // Meta propia del incidente (según su prioridad); 48h para incidentes sin SLA asignado
+                                // Meta propia del incidente (según su prioridad); 48h para incidentes sin tiempo de respuesta asignado
                                 new Document("$lte", java.util.Arrays.asList(
                                         "$tiempo_resolucion_minutos",
-                                        new Document("$ifNull", java.util.Arrays.asList("$sla_minutos_objetivo", SLA_POR_DEFECTO_MINUTOS))))
+                                        new Document("$ifNull", java.util.Arrays.asList(
+                                                new Document("$ifNull", java.util.Arrays.asList("$tiempo_respuesta_minutos_objetivo", "$sla_minutos_objetivo")),
+                                                TIEMPO_RESPUESTA_POR_DEFECTO_MINUTOS))))
                         ))
                 )
                 .append("then", 1)
@@ -156,7 +158,7 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
                 Aggregation.group()
                         .count().as("volumenOperativoTotal")
                         .sum(sumExpr).as("casosResueltos")
-                        .sum(sumSlaExpr).as("casosSla")
+                        .sum(sumTiempoRespuestaExpr).as("casosTiempoRespuesta")
                         .sum(sumCritExpr).as("casosCriticos"));
 
         AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "incidentes", Document.class);
@@ -168,14 +170,14 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
         long total = resultDoc.getInteger("volumenOperativoTotal", 0);
         long resueltos = resultDoc.getInteger("casosResueltos", 0);
-        long casosSla = resultDoc.getInteger("casosSla", 0);
+        long casosTiempoRespuesta = resultDoc.getInteger("casosTiempoRespuesta", 0);
         long casosCriticos = resultDoc.getInteger("casosCriticos", 0);
 
         double tasa = (total == 0) ? 0.0 : Math.round(((double) resueltos / total) * 100.0 * 10.0) / 10.0;
-        double cumplimientoSla = (resueltos == 0) ? 0.0 : Math.round(((double) casosSla / resueltos) * 100.0 * 10.0) / 10.0;
+        double cumplimientoTiempoRespuesta = (resueltos == 0) ? 0.0 : Math.round(((double) casosTiempoRespuesta / resueltos) * 100.0 * 10.0) / 10.0;
         double indiceCriticidad = (total == 0) ? 0.0 : Math.round(((double) casosCriticos / total) * 100.0 * 10.0) / 10.0;
 
-        return new ReporteKpiDTO(total, tasa, cumplimientoSla, indiceCriticidad);
+        return new ReporteKpiDTO(total, tasa, cumplimientoTiempoRespuesta, indiceCriticidad);
     }
 
     /**

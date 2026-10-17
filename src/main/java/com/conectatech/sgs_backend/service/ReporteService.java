@@ -164,7 +164,7 @@ public class ReporteService {
             secKpi.setCellStyle(sectionStyle);
 
             Row row7 = sheet.createRow(7);
-            String[] kpiHeaders = { "Volumen Operativo", "Tasa de Resolución", "Cumplimiento SLA", "Criticidad Zonal" };
+            String[] kpiHeaders = { "Volumen Operativo", "Tasa de Resolución", "Cumplimiento Tiempo de Respuesta", "Criticidad Zonal" };
             for (int i = 0; i < kpiHeaders.length; i++) {
                 org.apache.poi.ss.usermodel.Cell cell = row7.createCell(i);
                 cell.setCellValue(kpiHeaders[i]);
@@ -182,7 +182,7 @@ public class ReporteService {
             k1.setCellStyle(kpiValueStyle);
 
             org.apache.poi.ss.usermodel.Cell k2 = row8.createCell(2);
-            k2.setCellValue(kpis != null ? String.format(Locale.US, "%.1f%%", kpis.getCumplimientoSla()) : "0.0%");
+            k2.setCellValue(kpis != null ? String.format(Locale.US, "%.1f%%", kpis.getCumplimientoTiempoRespuesta()) : "0.0%");
             k2.setCellStyle(kpiValueStyle);
 
             org.apache.poi.ss.usermodel.Cell k3 = row8.createCell(3);
@@ -199,7 +199,7 @@ public class ReporteService {
             String[] columnas = {
                     "Código", "Fecha Registro", "Categoría", "Tipo", "Prioridad",
                     "Estado", "Dirección / Sector", "Origen Denuncia", "Fecha Cierre",
-                    "Resolución (min)", "Estado SLA"
+                    "Resolución (min)", "Estado Tiempo de Respuesta"
             };
 
             for (int i = 0; i < columnas.length; i++) {
@@ -230,7 +230,7 @@ public class ReporteService {
                         inc.getTiempoResolucionMinutos() != null ? String.valueOf(inc.getTiempoResolucionMinutos())
                                 : "-",
                         dataStyle);
-                crearCelda(row, 10, evaluarEstadoSla(inc), dataStyle);
+                crearCelda(row, 10, evaluarEstadoTiempoRespuesta(inc), dataStyle);
             }
 
             // Auto-ajuste de columnas
@@ -351,14 +351,14 @@ public class ReporteService {
 
             long volTotal = kpis != null ? kpis.getVolumenOperativoTotal() : incidentes.size();
             double tasaRes = kpis != null ? kpis.getTasaResolucionEfectiva() : 0.0;
-            double cumpSla = kpis != null ? kpis.getCumplimientoSla() : 0.0;
+            double cumpTiempoRespuesta = kpis != null ? kpis.getCumplimientoTiempoRespuesta() : 0.0;
             double critZon = kpis != null ? kpis.getIndiceCriticidad() : 0.0;
 
             agregarTarjetaKpi(kpiTable, "VOLUMEN OPERATIVO", String.valueOf(volTotal), "Denuncias totales", kpiBoxBg,
                     borderColor, primaryColor);
             agregarTarjetaKpi(kpiTable, "TASA RESOLUCIÓN", String.format(Locale.US, "%.1f%%", tasaRes),
                     "Meta operativa: ≥ 75%", kpiBoxBg, borderColor, primaryColor);
-            agregarTarjetaKpi(kpiTable, "CUMPLIMIENTO SLA", String.format(Locale.US, "%.1f%%", cumpSla),
+            agregarTarjetaKpi(kpiTable, "CUMPLIMIENTO TIEMPO DE RESPUESTA", String.format(Locale.US, "%.1f%%", cumpTiempoRespuesta),
                     "Meta operativa: ≥ 80%", kpiBoxBg, borderColor, primaryColor);
             agregarTarjetaKpi(kpiTable, "CRITICIDAD ZONAL", String.format(Locale.US, "%.1f%%", critZon),
                     "Meta operativa: ≤ 35%", kpiBoxBg, borderColor, primaryColor);
@@ -376,7 +376,7 @@ public class ReporteService {
             table.setWidth(UnitValue.createPercentValue(100));
 
             String[] cabeceras = { "Código", "Fecha", "Tipo / Denuncia", "Prioridad", "Estado", "Ubicación / Dirección",
-                    "SLA" };
+                    "Tiempo de Respuesta" };
             for (String cabecera : cabeceras) {
                 Cell cell = new Cell()
                         .add(new Paragraph(cabecera).setBold().setFontSize(8).setFontColor(ColorConstants.BLACK))
@@ -411,7 +411,7 @@ public class ReporteService {
                 table.addCell(
                         crearCeldaPdf(inc.getDireccionTexto() != null ? inc.getDireccionTexto() : "No especificada",
                                 7.5f, TextAlignment.LEFT, bgFila, borderColor));
-                table.addCell(crearCeldaPdf(evaluarEstadoSla(inc), 7.5f, TextAlignment.CENTER, bgFila, borderColor));
+                table.addCell(crearCeldaPdf(evaluarEstadoTiempoRespuesta(inc), 7.5f, TextAlignment.CENTER, bgFila, borderColor));
             }
 
             document.add(table);
@@ -472,15 +472,15 @@ public class ReporteService {
         cell.setCellStyle(style);
     }
 
-    private String evaluarEstadoSla(Incidente inc) {
+    private String evaluarEstadoTiempoRespuesta(Incidente inc) {
         if ("Resuelto".equalsIgnoreCase(inc.getEstado()) || "Cerrado".equalsIgnoreCase(inc.getEstado())) {
             if (inc.getTiempoResolucionMinutos() != null) {
-                long meta = inc.getSlaMinutosObjetivo() != null ? inc.getSlaMinutosObjetivo() : 2880L;
+                long meta = inc.getTiempoRespuestaMinutosObjetivo() != null ? inc.getTiempoRespuestaMinutosObjetivo() : 2880L;
                 return inc.getTiempoResolucionMinutos() <= meta ? "Cumplido" : "Fuera plazo";
             }
             return "Resuelto";
         }
-        if (inc.getFechaVencimientoSla() != null && LocalDateTime.now().isAfter(inc.getFechaVencimientoSla())) {
+        if (inc.getFechaVencimientoTiempoRespuesta() != null && LocalDateTime.now().isAfter(inc.getFechaVencimientoTiempoRespuesta())) {
             return "Vencido";
         }
         return "En curso";

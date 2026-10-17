@@ -40,11 +40,11 @@ public class Incidente {
     @Field("tiempo_resolucion_minutos")
     private Long tiempoResolucionMinutos;
 
-    @Field("sla_minutos_objetivo")
-    private Long slaMinutosObjetivo;
+    @Field("tiempo_respuesta_minutos_objetivo")
+    private Long tiempoRespuestaMinutosObjetivo;
 
-    @Field("fecha_vencimiento_sla")
-    private LocalDateTime fechaVencimientoSla;
+    @Field("fecha_vencimiento_tiempo_respuesta")
+    private LocalDateTime fechaVencimientoTiempoRespuesta;
 
     @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
     private GeoJsonPoint location;

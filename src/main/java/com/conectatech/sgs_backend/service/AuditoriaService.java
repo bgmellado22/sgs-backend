@@ -22,7 +22,7 @@ public class AuditoriaService {
      */
     public Usuario getUsuarioActual() {
         if (SecurityContextHolder.getContext().getAuthentication() != null &&
-            SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof Usuario) {
+                SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof Usuario) {
             return (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         }
         return null;
@@ -33,7 +33,7 @@ public class AuditoriaService {
      */
     public void registrarAuditoria(String campoModificado, String valorAnterior, String valorNuevo, String comentario) {
         Usuario actor = getUsuarioActual();
-        
+
         if (actor == null) {
             log.warn("No se pudo registrar en auditoría: No hay un usuario autenticado en el contexto.");
             return;

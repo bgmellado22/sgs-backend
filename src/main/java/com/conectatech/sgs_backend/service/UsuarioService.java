@@ -51,18 +51,19 @@ public class UsuarioService {
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
 
                 if (dto.getNombres() != null) {
-                    usuario.setNombres(dto.getNombres());
+                        usuario.setNombres(dto.getNombres());
                 }
                 if (dto.getPrimerApellido() != null) {
-                    usuario.setPrimerApellido(dto.getPrimerApellido());
+                        usuario.setPrimerApellido(dto.getPrimerApellido());
                 }
                 if (dto.getSegundoApellido() != null) {
-                    usuario.setSegundoApellido(dto.getSegundoApellido());
+                        usuario.setSegundoApellido(dto.getSegundoApellido());
                 }
                 if (dto.getNombres() != null && dto.getPrimerApellido() != null) {
-                    String seg = dto.getSegundoApellido() != null && !dto.getSegundoApellido().isBlank()
-                            ? " " + dto.getSegundoApellido().trim() : "";
-                    usuario.setNombreCompleto(dto.getNombres().trim() + " " + dto.getPrimerApellido().trim() + seg);
+                        String seg = dto.getSegundoApellido() != null && !dto.getSegundoApellido().isBlank()
+                                        ? " " + dto.getSegundoApellido().trim()
+                                        : "";
+                        usuario.setNombreCompleto(dto.getNombres().trim() + " " + dto.getPrimerApellido().trim() + seg);
                 }
 
                 usuario.setEmail(dto.getEmail());
@@ -89,7 +90,8 @@ public class UsuarioService {
                 Usuario actor = (Usuario) auth.getPrincipal();
 
                 Usuario usuario = usuarioRepository.findById(actor.getId())
-                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + actor.getId()));
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Usuario no encontrado con ID: " + actor.getId()));
 
                 if (dto.getNombres() != null) {
                         usuario.setNombres(dto.getNombres());
@@ -102,7 +104,8 @@ public class UsuarioService {
                 }
                 if (dto.getNombres() != null && dto.getPrimerApellido() != null) {
                         String seg = dto.getSegundoApellido() != null && !dto.getSegundoApellido().isBlank()
-                                ? " " + dto.getSegundoApellido().trim() : "";
+                                        ? " " + dto.getSegundoApellido().trim()
+                                        : "";
                         usuario.setNombreCompleto(dto.getNombres().trim() + " " + dto.getPrimerApellido().trim() + seg);
                 }
                 if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
@@ -150,7 +153,8 @@ public class UsuarioService {
                                 .campoModificado("Estado Usuario")
                                 .valorAnterior(estadoAnterior)
                                 .valorNuevo(estadoNuevo)
-                                .comentario("Usuario " + usuario.getNombreCompleto() + " fue " + estadoNuevo.toLowerCase() + " por " + actor.getNombreCompleto())
+                                .comentario("Usuario " + usuario.getNombreCompleto() + " fue "
+                                                + estadoNuevo.toLowerCase() + " por " + actor.getNombreCompleto())
                                 .fechaModificacion(LocalDateTime.now())
                                 .build();
 

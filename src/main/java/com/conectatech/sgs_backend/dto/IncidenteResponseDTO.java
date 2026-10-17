@@ -17,8 +17,8 @@ public class IncidenteResponseDTO {
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaCierre;
     private Long tiempoResolucionMinutos;
-    private Long slaMinutosObjetivo;
-    private LocalDateTime fechaVencimientoSla;
+    private Long tiempoRespuestaMinutosObjetivo;
+    private LocalDateTime fechaVencimientoTiempoRespuesta;
     private String origen;
     private Double latitud;
     private Double longitud;

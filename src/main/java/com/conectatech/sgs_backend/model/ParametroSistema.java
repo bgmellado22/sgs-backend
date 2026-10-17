@@ -19,7 +19,7 @@ public class ParametroSistema {
     private String id;
 
     @Indexed(unique = true)
-    private String clave; // Ej: "SLA_SOS_MINUTOS", "SLA_ALTA_MINUTOS"
+    private String clave; // Ej: "TIEMPO_RESPUESTA_SOS_MINUTOS", "TIEMPO_RESPUESTA_ALTA_MINUTOS"
 
     private String valor;
 }
