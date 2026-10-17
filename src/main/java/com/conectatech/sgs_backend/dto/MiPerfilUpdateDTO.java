@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class MiPerfilUpdateDTO {
     private String nombres;
-    private String apellidoPaterno;
-    private String apellidoMaterno;
+    private String primerApellido;
+    private String segundoApellido;
     private String email;
     private String password;
 }

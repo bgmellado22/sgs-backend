@@ -1,9 +1,11 @@
 package com.conectatech.sgs_backend.service;
 
 import com.conectatech.sgs_backend.dto.DerivacionRequestDTO;
+import com.conectatech.sgs_backend.dto.DenuncianteDTO;
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
 import com.conectatech.sgs_backend.model.Incidente;
+import com.conectatech.sgs_backend.model.Denunciante;
 import com.conectatech.sgs_backend.model.Evidencia;
 import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
@@ -72,6 +74,24 @@ public class IncidenteService {
                 incidente.setCodigoCorrelativo("INC-" + (int) (Math.random() * 900 + 100));
                 incidente.setEstado("Pendiente");
                 incidente.setFechaCreacion(LocalDateTime.now());
+
+                // Datos del denunciante (opcional)
+                if (dto.getDenunciante() != null) {
+                        Denunciante den = Denunciante.builder()
+                                        .nombres(dto.getDenunciante().getNombres())
+                                        .primerApellido(dto.getDenunciante().getPrimerApellido())
+                                        .segundoApellido(dto.getDenunciante().getSegundoApellido())
+                                        .telefono(dto.getDenunciante().getTelefono())
+                                        .run(dto.getDenunciante().getRun())
+                                        .correoElectronico(dto.getDenunciante().getCorreoElectronico())
+                                        .enElLugar(dto.getDenunciante().getEnElLugar())
+                                        .build();
+                        incidente.setDenunciante(den);
+                        incidente.setEsAnonimo(dto.getEsAnonimo() != null ? dto.getEsAnonimo() : false);
+                } else {
+                        incidente.setDenunciante(null);
+                        incidente.setEsAnonimo(dto.getEsAnonimo() != null ? dto.getEsAnonimo() : true);
+                }
 
                 asignarVencimientoSla(incidente);
 
@@ -304,6 +324,21 @@ public class IncidenteService {
                 // Evidencias Multimedia
                 dto.setEvidencias(incidente.getEvidencias() != null ? incidente.getEvidencias() : Collections.emptyList());
 
+                // Datos del Denunciante
+                if (incidente.getDenunciante() != null) {
+                        DenuncianteDTO denDto = DenuncianteDTO.builder()
+                                        .nombres(incidente.getDenunciante().getNombres())
+                                        .primerApellido(incidente.getDenunciante().getPrimerApellido())
+                                        .segundoApellido(incidente.getDenunciante().getSegundoApellido())
+                                        .telefono(incidente.getDenunciante().getTelefono())
+                                        .run(incidente.getDenunciante().getRun())
+                                        .correoElectronico(incidente.getDenunciante().getCorreoElectronico())
+                                        .enElLugar(incidente.getDenunciante().getEnElLugar())
+                                        .build();
+                        dto.setDenunciante(denDto);
+                }
+                dto.setEsAnonimo(incidente.isEsAnonimo());
+
                 return dto;
         }
 
@@ -465,6 +500,24 @@ public class IncidenteService {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Estado",
                                         estadoAnterior, nuevoEstado,
                                         "Edición de estado administrativo por " + actor.getNombreCompleto());
+                }
+
+                // Actualizar datos del denunciante
+                if (dto.getDenunciante() != null) {
+                        Denunciante den = Denunciante.builder()
+                                        .nombres(dto.getDenunciante().getNombres())
+                                        .primerApellido(dto.getDenunciante().getPrimerApellido())
+                                        .segundoApellido(dto.getDenunciante().getSegundoApellido())
+                                        .telefono(dto.getDenunciante().getTelefono())
+                                        .run(dto.getDenunciante().getRun())
+                                        .correoElectronico(dto.getDenunciante().getCorreoElectronico())
+                                        .enElLugar(dto.getDenunciante().getEnElLugar())
+                                        .build();
+                        incidente.setDenunciante(den);
+                        incidente.setEsAnonimo(dto.getEsAnonimo() != null ? dto.getEsAnonimo() : false);
+                } else if (Boolean.TRUE.equals(dto.getEsAnonimo())) {
+                        incidente.setDenunciante(null);
+                        incidente.setEsAnonimo(true);
                 }
 
                 Incidente actualizado = incidenteRepository.save(incidente);

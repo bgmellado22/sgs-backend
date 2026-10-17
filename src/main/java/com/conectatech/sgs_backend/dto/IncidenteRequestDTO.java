@@ -40,4 +40,7 @@ public class IncidenteRequestDTO {
     @NotBlank(message = "La referencia descriptiva es obligatoria")
     @Size(min = 5, max = 200, message = "La referencia debe tener entre 5 y 200 caracteres")
     private String direccionTexto;
+
+    private DenuncianteDTO denunciante;
+    private Boolean esAnonimo;
 }

@@ -31,8 +31,8 @@ public class Usuario implements UserDetails {
     private String run;
 
     private String nombres;
-    private String apellidoPaterno;
-    private String apellidoMaterno;
+    private String primerApellido;
+    private String segundoApellido;
     private String nombreCompleto;
 
     @Indexed(unique = true)

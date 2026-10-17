@@ -60,8 +60,8 @@ public class JwtUtil {
             Usuario u = (Usuario) userDetails;
             extraClaims.put("nombreCompleto", u.getNombreCompleto());
             extraClaims.put("nombres", u.getNombres());
-            extraClaims.put("apellidoPaterno", u.getApellidoPaterno());
-            extraClaims.put("apellidoMaterno", u.getApellidoMaterno());
+            extraClaims.put("primerApellido", u.getPrimerApellido());
+            extraClaims.put("segundoApellido", u.getSegundoApellido());
         }
 
         return generateToken(extraClaims, userDetails);

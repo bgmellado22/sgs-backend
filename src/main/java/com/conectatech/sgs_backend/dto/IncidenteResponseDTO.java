@@ -37,4 +37,8 @@ public class IncidenteResponseDTO {
 
     // Evidencias Multimedia
     private List<Evidencia> evidencias;
+
+    // Datos del Denunciante
+    private DenuncianteDTO denunciante;
+    private boolean esAnonimo;
 }

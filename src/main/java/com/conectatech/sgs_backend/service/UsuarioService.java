@@ -35,8 +35,8 @@ public class UsuarioService {
                                                 .id(usuario.getId())
                                                 .run(usuario.getRun())
                                                 .nombres(usuario.getNombres())
-                                                .apellidoPaterno(usuario.getApellidoPaterno())
-                                                .apellidoMaterno(usuario.getApellidoMaterno())
+                                                .primerApellido(usuario.getPrimerApellido())
+                                                .segundoApellido(usuario.getSegundoApellido())
                                                 .nombreCompleto(usuario.getNombreCompleto())
                                                 .email(usuario.getEmail())
                                                 .rol(usuario.getRol())
@@ -53,14 +53,16 @@ public class UsuarioService {
                 if (dto.getNombres() != null) {
                     usuario.setNombres(dto.getNombres());
                 }
-                if (dto.getApellidoPaterno() != null) {
-                    usuario.setApellidoPaterno(dto.getApellidoPaterno());
+                if (dto.getPrimerApellido() != null) {
+                    usuario.setPrimerApellido(dto.getPrimerApellido());
                 }
-                if (dto.getApellidoMaterno() != null) {
-                    usuario.setApellidoMaterno(dto.getApellidoMaterno());
+                if (dto.getSegundoApellido() != null) {
+                    usuario.setSegundoApellido(dto.getSegundoApellido());
                 }
-                if (dto.getNombres() != null && dto.getApellidoPaterno() != null && dto.getApellidoMaterno() != null) {
-                    usuario.setNombreCompleto(dto.getNombres() + " " + dto.getApellidoPaterno() + " " + dto.getApellidoMaterno());
+                if (dto.getNombres() != null && dto.getPrimerApellido() != null) {
+                    String seg = dto.getSegundoApellido() != null && !dto.getSegundoApellido().isBlank()
+                            ? " " + dto.getSegundoApellido().trim() : "";
+                    usuario.setNombreCompleto(dto.getNombres().trim() + " " + dto.getPrimerApellido().trim() + seg);
                 }
 
                 usuario.setEmail(dto.getEmail());
@@ -72,8 +74,8 @@ public class UsuarioService {
                                 .id(usuarioActualizado.getId())
                                 .run(usuarioActualizado.getRun())
                                 .nombres(usuarioActualizado.getNombres())
-                                .apellidoPaterno(usuarioActualizado.getApellidoPaterno())
-                                .apellidoMaterno(usuarioActualizado.getApellidoMaterno())
+                                .primerApellido(usuarioActualizado.getPrimerApellido())
+                                .segundoApellido(usuarioActualizado.getSegundoApellido())
                                 .nombreCompleto(usuarioActualizado.getNombreCompleto())
                                 .email(usuarioActualizado.getEmail())
                                 .rol(usuarioActualizado.getRol())
@@ -92,14 +94,16 @@ public class UsuarioService {
                 if (dto.getNombres() != null) {
                         usuario.setNombres(dto.getNombres());
                 }
-                if (dto.getApellidoPaterno() != null) {
-                        usuario.setApellidoPaterno(dto.getApellidoPaterno());
+                if (dto.getPrimerApellido() != null) {
+                        usuario.setPrimerApellido(dto.getPrimerApellido());
                 }
-                if (dto.getApellidoMaterno() != null) {
-                        usuario.setApellidoMaterno(dto.getApellidoMaterno());
+                if (dto.getSegundoApellido() != null) {
+                        usuario.setSegundoApellido(dto.getSegundoApellido());
                 }
-                if (dto.getNombres() != null && dto.getApellidoPaterno() != null && dto.getApellidoMaterno() != null) {
-                        usuario.setNombreCompleto(dto.getNombres() + " " + dto.getApellidoPaterno() + " " + dto.getApellidoMaterno());
+                if (dto.getNombres() != null && dto.getPrimerApellido() != null) {
+                        String seg = dto.getSegundoApellido() != null && !dto.getSegundoApellido().isBlank()
+                                ? " " + dto.getSegundoApellido().trim() : "";
+                        usuario.setNombreCompleto(dto.getNombres().trim() + " " + dto.getPrimerApellido().trim() + seg);
                 }
                 if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
                         usuario.setEmail(dto.getEmail());
@@ -114,8 +118,8 @@ public class UsuarioService {
                                 .id(usuarioActualizado.getId())
                                 .run(usuarioActualizado.getRun())
                                 .nombres(usuarioActualizado.getNombres())
-                                .apellidoPaterno(usuarioActualizado.getApellidoPaterno())
-                                .apellidoMaterno(usuarioActualizado.getApellidoMaterno())
+                                .primerApellido(usuarioActualizado.getPrimerApellido())
+                                .segundoApellido(usuarioActualizado.getSegundoApellido())
                                 .nombreCompleto(usuarioActualizado.getNombreCompleto())
                                 .email(usuarioActualizado.getEmail())
                                 .rol(usuarioActualizado.getRol())
@@ -156,8 +160,8 @@ public class UsuarioService {
                                 .id(usuarioActualizado.getId())
                                 .run(usuarioActualizado.getRun())
                                 .nombres(usuarioActualizado.getNombres())
-                                .apellidoPaterno(usuarioActualizado.getApellidoPaterno())
-                                .apellidoMaterno(usuarioActualizado.getApellidoMaterno())
+                                .primerApellido(usuarioActualizado.getPrimerApellido())
+                                .segundoApellido(usuarioActualizado.getSegundoApellido())
                                 .nombreCompleto(usuarioActualizado.getNombreCompleto())
                                 .email(usuarioActualizado.getEmail())
                                 .rol(usuarioActualizado.getRol())
@@ -174,8 +178,8 @@ public class UsuarioService {
                                                 .id(inspector.getId())
                                                 .run(inspector.getRun())
                                                 .nombres(inspector.getNombres())
-                                                .apellidoPaterno(inspector.getApellidoPaterno())
-                                                .apellidoMaterno(inspector.getApellidoMaterno())
+                                                .primerApellido(inspector.getPrimerApellido())
+                                                .segundoApellido(inspector.getSegundoApellido())
                                                 .nombreCompleto(inspector.getNombreCompleto())
                                                 .email(inspector.getEmail())
                                                 .rol(inspector.getRol())

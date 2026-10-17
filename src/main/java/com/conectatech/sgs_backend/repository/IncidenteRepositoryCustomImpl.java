@@ -38,11 +38,15 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
         // Filtros base: solo mostrar incidentes activos
         criterios.add(Criteria.where("activo").is(true));
 
-        // Búsqueda por texto (descripción o código correlativo)
+        // Búsqueda por texto (descripción, código correlativo o datos del denunciante)
         if (textoBusqueda != null && !textoBusqueda.isBlank()) {
             Criteria textoCriteria = new Criteria().orOperator(
                     Criteria.where("descripcion").regex(textoBusqueda, "i"),
-                    Criteria.where("codigoCorrelativo").regex(textoBusqueda, "i"));
+                    Criteria.where("codigoCorrelativo").regex(textoBusqueda, "i"),
+                    Criteria.where("denunciante.nombres").regex(textoBusqueda, "i"),
+                    Criteria.where("denunciante.primer_apellido").regex(textoBusqueda, "i"),
+                    Criteria.where("denunciante.run").regex(textoBusqueda, "i"),
+                    Criteria.where("denunciante.telefono").regex(textoBusqueda, "i"));
             criterios.add(textoCriteria);
         }
 

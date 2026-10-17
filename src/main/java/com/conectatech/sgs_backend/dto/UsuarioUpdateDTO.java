@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 public class UsuarioUpdateDTO {
     private String nombres;
-    private String apellidoPaterno;
-    private String apellidoMaterno;
+    private String primerApellido;
+    private String segundoApellido;
     private String email;
     private RolUsuario rol;
 }

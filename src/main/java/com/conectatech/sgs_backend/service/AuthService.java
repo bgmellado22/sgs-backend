@@ -49,12 +49,16 @@ public class AuthService {
                 // Asignar rol CIUDADANO por defecto si viene nulo
                 RolUsuario rol = request.getRol() != null ? request.getRol() : RolUsuario.CIUDADANO;
 
+                String nombreCompleto = (request.getSegundoApellido() != null && !request.getSegundoApellido().isBlank())
+                                ? request.getNombres() + " " + request.getPrimerApellido() + " " + request.getSegundoApellido().trim()
+                                : request.getNombres() + " " + request.getPrimerApellido();
+
                 var user = Usuario.builder()
                                 .run(request.getRun())
                                 .nombres(request.getNombres())
-                                .apellidoPaterno(request.getApellidoPaterno())
-                                .apellidoMaterno(request.getApellidoMaterno())
-                                .nombreCompleto(request.getNombres() + " " + request.getApellidoPaterno() + " " + request.getApellidoMaterno())
+                                .primerApellido(request.getPrimerApellido())
+                                .segundoApellido(request.getSegundoApellido())
+                                .nombreCompleto(nombreCompleto.trim())
                                 .email(request.getEmail())
                                 .password(passwordEncoder.encode(request.getPassword()))
                                 .rol(rol)

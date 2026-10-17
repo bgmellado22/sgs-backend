@@ -79,11 +79,18 @@ public class Incidente {
     @Field("evidencias")
     private List<Evidencia> evidencias;
 
+    @Field("denunciante")
+    private Denunciante denunciante;
+
+    @Field("es_anonimo")
+    private boolean esAnonimo;
+
     private boolean activo;
 
     public Incidente() {
         this.derivado = false;
         this.evidencias = new ArrayList<>();
         this.activo = true;
+        this.esAnonimo = true;
     }
 }

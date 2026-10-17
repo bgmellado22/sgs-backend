@@ -10,8 +10,8 @@ public class UsuarioResponseDTO {
     private String id;
     private String run;
     private String nombres;
-    private String apellidoPaterno;
-    private String apellidoMaterno;
+    private String primerApellido;
+    private String segundoApellido;
     private String nombreCompleto;
     private String email;
     private RolUsuario rol;
