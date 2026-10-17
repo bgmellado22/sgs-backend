@@ -375,8 +375,12 @@ public class IncidenteService {
                 bitacoraRepository.save(registro);
         }
 
-        // Método para actualizar el estado de un incidente con auditoría
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado) {
+                return actualizarEstado(id, nuevoEstado, null);
+        }
+
+        // Método para actualizar el estado de un incidente con auditoría y motivo explicativo
+        public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo) {
                 Incidente incidenteExistente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new RuntimeException(
                                                 "Error: Incidente no encontrado con el ID: " + id));
@@ -406,10 +410,14 @@ public class IncidenteService {
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
 
+                String detalleAuditoria = (motivo != null && !motivo.isBlank())
+                                ? motivo
+                                : ("Actualización de estado a " + nuevoEstado + " desde panel operativo");
+
                 // Llamar al método de auditoría
                 registrarAuditoria(actualizado.getId(), actualizado.getCodigoCorrelativo(), actor, "Estado",
                                 estadoAnterior, nuevoEstado,
-                                "Actualización de estado desde panel operativo");
+                                detalleAuditoria);
 
                 // Gatillo global de websocket para notificar a todos los usuarios
                 Notificacion alertaGlobal = Notificacion.builder()

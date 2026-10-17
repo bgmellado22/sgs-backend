@@ -115,7 +115,8 @@ public class IncidenteController {
             @RequestBody Map<String, String> request) {
 
         String nuevoEstado = request.get("estado");
-        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, nuevoEstado);
+        String motivo = request.get("motivo");
+        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, nuevoEstado, motivo);
         return ResponseEntity.ok(actualizado);
     }
 
