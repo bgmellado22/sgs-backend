@@ -12,7 +12,7 @@ public class IncidenteRequestDTO {
     @NotBlank(message = "La categoría no puede estar vacía")
     private String categoria;
 
-    @NotBlank(message = "El tipo de evento es obligatorio")
+    @NotBlank(message = "El tipo de incidente es obligatorio")
     private String tipo;
 
     @NotBlank(message = "La descripción de los hechos es obligatoria")

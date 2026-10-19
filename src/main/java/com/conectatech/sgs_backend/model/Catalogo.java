@@ -34,7 +34,7 @@ public class Catalogo {
     @Pattern(regexp = HEX_REGEX, message = "El color de fondo debe tener formato #RRGGBB")
     private String colorBg;
 
-    // Relaciones para TIPO_EVENTO -> CATEGORIA y PRIORIDAD
+    // Relaciones para TIPO_INCIDENTE -> CATEGORIA y PRIORIDAD
     private String categoriaAsociada;
     private String prioridadAsociada;
 

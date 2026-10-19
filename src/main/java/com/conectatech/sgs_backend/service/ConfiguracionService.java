@@ -28,7 +28,7 @@ public class ConfiguracionService {
      * Tipos de catálogo administrables dinámicamente.
      * Prioridad y Categoría son estándares fijos inmutables.
      */
-    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "TIPO_EVENTO");
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "TIPO_INCIDENTE");
 
     /**
      * Etiquetas legibles para el mensaje de auditoría por tipo.
@@ -37,11 +37,10 @@ public class ConfiguracionService {
             "ORIGEN", "Origen de denuncia",
             "PRIORIDAD", "Prioridad",
             "CATEGORIA", "Categoría",
-            "TIPO_EVENTO", "Tipo de Evento"
-    );
+            "TIPO_INCIDENTE", "Tipo de Incidente");
 
     // ──────────────────────────────────────────────
-    //  PARÁMETROS DEL SISTEMA (Tiempos de Respuesta y otros)
+    // PARÁMETROS DEL SISTEMA (Tiempos de Respuesta y otros)
     // ──────────────────────────────────────────────
 
     /**
@@ -53,7 +52,8 @@ public class ConfiguracionService {
 
     /**
      * Actualización masiva de parámetros.
-     * Recibe un mapa clave→valor. Si la clave existe, actualiza; si no, crea el parámetro.
+     * Recibe un mapa clave→valor. Si la clave existe, actualiza; si no, crea el
+     * parámetro.
      */
     public List<ParametroSistema> actualizarParametros(Map<String, String> parametros) {
         Usuario admin = auditoriaService.getUsuarioActual();
@@ -61,21 +61,20 @@ public class ConfiguracionService {
         parametros.forEach((clave, valor) -> {
             ParametroSistema param = parametroSistemaRepository.findByClave(clave)
                     .orElse(ParametroSistema.builder().clave(clave).build());
-            
+
             String valorAnterior = param.getValor() == null ? "NO EXISTE" : param.getValor();
             boolean esNuevo = param.getId() == null;
-            
+
             param.setValor(valor);
             parametroSistemaRepository.save(param);
-            
+
             String accion = esNuevo ? "CREACIÓN" : "MODIFICACIÓN";
             String mensaje = String.format(
                     "El Administrador %s ha realizado una %s en el Parámetro de Tiempo de Respuesta: %s (Nuevo valor: %s)",
                     admin != null ? admin.getNombreCompleto() : "Sistema",
                     accion,
                     clave,
-                    valor
-            );
+                    valor);
 
             String codigoBitacora = esNuevo ? "TIEMPO_RESPUESTA_CREACION" : "TIEMPO_RESPUESTA_MODIFICACION";
             auditoriaService.registrarAuditoria(codigoBitacora, valorAnterior, valor, mensaje);
@@ -100,15 +99,14 @@ public class ConfiguracionService {
                 "El Administrador %s ha eliminado el Parámetro de Tiempo de Respuesta: %s (Valor anterior: %s)",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 parametro.getClave(),
-                parametro.getValor()
-        );
+                parametro.getValor());
 
         auditoriaService.registrarAuditoria("TIEMPO_RESPUESTA_ELIMINACION", parametro.getValor(), "ELIMINADO", mensaje);
     }
 
     // ──────────────────────────────────────────────
-    //  CATÁLOGOS (Origen, Prioridad, Categoría)
-    //  con auditoría forense Zero-Trust
+    // CATÁLOGOS (Origen, Prioridad, Categoría)
+    // con auditoría forense Zero-Trust
     // ──────────────────────────────────────────────
 
     public List<Catalogo> obtenerCatalogosAdmin(String tipo) {
@@ -116,8 +114,7 @@ public class ConfiguracionService {
         if (!TIPOS_PERMITIDOS.contains(tipoNormalizado)) {
             throw new IllegalArgumentException(
                     "Tipo de catálogo no permitido: " + tipo
-                            + ". Valores válidos: " + TIPOS_PERMITIDOS
-            );
+                            + ". Valores válidos: " + TIPOS_PERMITIDOS);
         }
         return catalogoRepository.findByTipo(tipoNormalizado);
     }
@@ -128,7 +125,8 @@ public class ConfiguracionService {
      * la identidad del administrador extraída del SecurityContextHolder.
      *
      * @param tipo     Tipo de catálogo (ORIGEN, PRIORIDAD, CATEGORIA)
-     * @param catalogo Datos del nuevo catálogo (valor, etiqueta, nivelOrden, colorHex, colorBg)
+     * @param catalogo Datos del nuevo catálogo (valor, etiqueta, nivelOrden,
+     *                 colorHex, colorBg)
      * @return Catálogo creado
      * @throws IllegalArgumentException si el tipo no está en la whitelist
      */
@@ -140,8 +138,7 @@ public class ConfiguracionService {
         if (!TIPOS_PERMITIDOS.contains(tipoNormalizado)) {
             throw new IllegalArgumentException(
                     "Tipo de catálogo no permitido: " + tipo
-                            + ". Valores válidos: " + TIPOS_PERMITIDOS
-            );
+                            + ". Valores válidos: " + TIPOS_PERMITIDOS);
         }
 
         // Forzar tipo y activar por defecto
@@ -158,8 +155,7 @@ public class ConfiguracionService {
                 "El Administrador %s ha creado el nuevo %s: %s",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 etiquetaTipo,
-                guardado.getValor()
-        );
+                guardado.getValor());
 
         auditoriaService.registrarAuditoria("CATALOGO_CREACION", null, guardado.getValor(), mensaje);
 
@@ -176,7 +172,8 @@ public class ConfiguracionService {
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
 
         if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
-            throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo() + " son inmutables por defecto y no pueden modificarse.");
+            throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo()
+                    + " son inmutables por defecto y no pueden modificarse.");
         }
 
         String etiquetaAnterior = existente.getEtiqueta();
@@ -184,7 +181,8 @@ public class ConfiguracionService {
         boolean estadoAnterior = existente.isActivo();
 
         // El valor interno es inmutable: los incidentes lo guardan como referencia
-        // (categoria / prioridad), y cambiarlo los dejaría huérfanos. Solo se edita la etiqueta y estado.
+        // (categoria / prioridad), y cambiarlo los dejaría huérfanos. Solo se edita la
+        // etiqueta y estado.
         existente.setEtiqueta(catalogoActualizado.getEtiqueta());
         existente.setActivo(catalogoActualizado.isActivo());
 
@@ -223,14 +221,12 @@ public class ConfiguracionService {
                     nombreAdmin,
                     accion,
                     etiquetaTipo,
-                    guardado.getValor()
-            );
+                    guardado.getValor());
             auditoriaService.registrarAuditoria(
                     tipoAccion,
                     guardado.getValor() + " (" + (estadoAnterior ? "Activo" : "Inactivo") + ")",
                     guardado.getValor() + " (" + (guardado.isActivo() ? "Activo" : "Inactivo") + ")",
-                    mensajeEstado
-            );
+                    mensajeEstado);
         }
 
         // 2. Registrar modificación de propiedades SOLO si hubo cambios reales
@@ -256,12 +252,13 @@ public class ConfiguracionService {
                     guardado.getValor(),
                     etiquetaAnterior,
                     guardado.getEtiqueta(),
-                    difVisual
-            );
+                    difVisual);
 
-            String valorAnt = guardado.getValor() + " (" + etiquetaAnterior + (!visualAnterior.isEmpty() ? ", " + visualAnterior : "") + ")";
-            String valorNue = guardado.getValor() + " (" + guardado.getEtiqueta() + (!visualNuevo.isEmpty() ? ", " + visualNuevo : "") + ")";
-            
+            String valorAnt = guardado.getValor() + " (" + etiquetaAnterior
+                    + (!visualAnterior.isEmpty() ? ", " + visualAnterior : "") + ")";
+            String valorNue = guardado.getValor() + " (" + guardado.getEtiqueta()
+                    + (!visualNuevo.isEmpty() ? ", " + visualNuevo : "") + ")";
+
             auditoriaService.registrarAuditoria("CATALOGO_MODIFICACION", valorAnt, valorNue, mensajeMod);
         }
 
@@ -285,7 +282,8 @@ public class ConfiguracionService {
                 .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
 
         if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
-            throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo() + " son inmutables por defecto y no pueden eliminarse.");
+            throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo()
+                    + " son inmutables por defecto y no pueden eliminarse.");
         }
 
         catalogoRepository.delete(existente);
@@ -298,8 +296,7 @@ public class ConfiguracionService {
                 "El Administrador %s ha eliminado el %s: %s",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 etiquetaTipo,
-                existente.getValor()
-        );
+                existente.getValor());
 
         auditoriaService.registrarAuditoria("CATALOGO_ELIMINACION", existente.getValor(), "ELIMINADO", mensaje);
     }

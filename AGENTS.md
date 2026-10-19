@@ -37,7 +37,7 @@ Este documento define el estándar técnico obligatorio que cualquier agente de 
 
 ### 2.3 Estrategia de Caché de Aplicación (Spring Cache)
 - **Lecturas frecuentes e inmutables**:
-  - Entidades de configuración o catálogos (`ORIGEN`, `PRIORIDAD`, `CATEGORIA`, `TIPO_EVENTO`) deben anotarse con `@Cacheable(value = "catalogos", key = "#tipo.toUpperCase()")`.
+  - Entidades de configuración o catálogos (`ORIGEN`, `PRIORIDAD`, `CATEGORIA`, `TIPO_INCIDENTE`) deben anotarse con `@Cacheable(value = "catalogos", key = "#tipo.toUpperCase()")`.
 - **Evicción precisa de caché**:
   - Toda operación de mutación (`crear`, `editar`, `eliminar`, `activar/desactivar`) debe incluir `@CacheEvict(value = "catalogos", allEntries = true)`.
 - **Aislamiento en tests**:
