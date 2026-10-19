@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -112,6 +114,36 @@ public class IncidenteControllerTest {
     @DisplayName("POST /incidentes con rol INSPECTOR → 403 Forbidden")
     public void testCrearIncidente_ConRolInspector_Retorna403() throws Exception {
         mockMvc.perform(multipart("/api/v1/incidentes")
+                .with(user("inspector").roles("INSPECTOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    // Tests DELETE /api/v1/incidentes/{id}
+
+    @Test
+    @DisplayName("DELETE /incidentes/{id} con rol ADMINISTRADOR → 204 No Content")
+    public void testEliminarIncidente_ConRolAdmin_Retorna204() throws Exception {
+        doNothing().when(incidenteService).eliminarIncidente("incidente123");
+
+        mockMvc.perform(delete("/api/v1/incidentes/incidente123")
+                .with(user("admin").roles("ADMINISTRADOR")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("DELETE /incidentes/{id} con rol OPERADOR → 204 No Content")
+    public void testEliminarIncidente_ConRolOperador_Retorna204() throws Exception {
+        doNothing().when(incidenteService).eliminarIncidente("incidente123");
+
+        mockMvc.perform(delete("/api/v1/incidentes/incidente123")
+                .with(user("operador").roles("OPERADOR")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("DELETE /incidentes/{id} con rol INSPECTOR → 403 Forbidden")
+    public void testEliminarIncidente_ConRolInspector_Retorna403() throws Exception {
+        mockMvc.perform(delete("/api/v1/incidentes/incidente123")
                 .with(user("inspector").roles("INSPECTOR")))
                 .andExpect(status().isForbidden());
     }

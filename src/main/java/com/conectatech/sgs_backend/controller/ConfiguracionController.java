@@ -37,10 +37,10 @@ public class ConfiguracionController {
     /**
      * PUT /api/v1/configuracion/parametros
      * Actualiza masivamente los parámetros del sistema.
-     * Seguridad: Solo ADMINISTRADOR.
+     * Seguridad: ADMINISTRADOR y OPERADOR.
      */
     @PutMapping("/parametros")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<List<ParametroSistema>> actualizarParametros(
             @RequestBody Map<String, String> parametros) {
         return ResponseEntity.ok(configuracionService.actualizarParametros(parametros));
@@ -49,10 +49,10 @@ public class ConfiguracionController {
     /**
      * DELETE /api/v1/configuracion/parametros/{id}
      * Elimina un parámetro del sistema.
-     * Seguridad: Solo ADMINISTRADOR.
+     * Seguridad: ADMINISTRADOR y OPERADOR.
      */
     @DeleteMapping("/parametros/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<Void> eliminarParametro(@PathVariable String id) {
         configuracionService.eliminarParametro(id);
         return ResponseEntity.noContent().build();
@@ -65,10 +65,10 @@ public class ConfiguracionController {
     /**
      * GET /api/v1/configuracion/catalogos/{tipo}
      * Retorna todos los catálogos (activos e inactivos) del tipo indicado.
-     * Seguridad: Solo ADMINISTRADOR.
+     * Seguridad: ADMINISTRADOR y OPERADOR.
      */
     @GetMapping("/catalogos/{tipo}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<List<Catalogo>> obtenerCatalogosAdmin(@PathVariable String tipo) {
         return ResponseEntity.ok(configuracionService.obtenerCatalogosAdmin(tipo));
     }
@@ -77,11 +77,11 @@ public class ConfiguracionController {
      * POST /api/v1/configuracion/catalogos/{tipo}
      * Crea un nuevo valor de catálogo del tipo indicado.
      * Tipos permitidos: origen, prioridad, categoria
-     * Seguridad: Solo ADMINISTRADOR.
+     * Seguridad: ADMINISTRADOR y OPERADOR.
      * Auditoría: Registro forense automático en bitácora.
      */
     @PostMapping("/catalogos/{tipo}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<Catalogo> crearCatalogo(
             @PathVariable String tipo,
             @Valid @RequestBody Catalogo catalogo) {
@@ -92,10 +92,10 @@ public class ConfiguracionController {
     /**
      * PUT /api/v1/configuracion/catalogos/{id}
      * Edita un valor de catálogo existente.
-     * Seguridad: Solo ADMINISTRADOR.
+     * Seguridad: ADMINISTRADOR y OPERADOR.
      */
     @PutMapping("/catalogos/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<Catalogo> editarCatalogo(
             @PathVariable String id,
             @Valid @RequestBody Catalogo catalogo) {
@@ -105,10 +105,10 @@ public class ConfiguracionController {
     /**
      * DELETE /api/v1/configuracion/catalogos/{id}
      * Elimina un valor de catálogo.
-     * Seguridad: Solo ADMINISTRADOR.
+     * Seguridad: ADMINISTRADOR y OPERADOR.
      */
     @DeleteMapping("/catalogos/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<Void> eliminarCatalogo(@PathVariable String id) {
         configuracionService.eliminarCatalogo(id);
         return ResponseEntity.noContent().build();

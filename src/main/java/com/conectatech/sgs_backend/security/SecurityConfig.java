@@ -64,9 +64,11 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/configuracion/**")
                                                 .authenticated()
                                                 .requestMatchers(HttpMethod.PUT, "/api/v1/configuracion/**")
-                                                .hasRole("ADMINISTRADOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/configuracion/**")
-                                                .hasRole("ADMINISTRADOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/configuracion/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
 
                                                 // Módulo de Incidentes
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/incidentes/*/evidencia")
@@ -82,7 +84,7 @@ public class SecurityConfig {
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
-                                                .hasRole("ADMINISTRADOR")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR", "CIUDADANO")
