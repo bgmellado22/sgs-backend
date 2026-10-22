@@ -43,8 +43,8 @@ public final class PiiMaskingUtils {
         }
         String limpio = phone.trim();
         if (limpio.length() > 6) {
-            String inicio = limpio.substring(0, Math.min(6, limpio.length() - 4));
-            String fin = limpio.substring(limpio.length() - 4);
+            String inicio = limpio.substring(0, Math.min(6, limpio.length() - 4)).trim();
+            String fin = limpio.substring(limpio.length() - 4).trim();
             return inicio + " **** " + fin;
         }
         return "****";
