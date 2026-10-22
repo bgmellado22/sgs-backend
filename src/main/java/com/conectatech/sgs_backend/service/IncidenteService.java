@@ -333,19 +333,9 @@ public class IncidenteService {
                 dto.setEvidencias(incidente.getEvidencias() != null ? incidente.getEvidencias()
                                 : Collections.emptyList());
 
-                // Datos del Denunciante
-                if (incidente.getDenunciante() != null) {
-                        DenuncianteDTO denDto = DenuncianteDTO.builder()
-                                        .nombres(incidente.getDenunciante().getNombres())
-                                        .primerApellido(incidente.getDenunciante().getPrimerApellido())
-                                        .segundoApellido(incidente.getDenunciante().getSegundoApellido())
-                                        .telefono(incidente.getDenunciante().getTelefono())
-                                        .run(incidente.getDenunciante().getRun())
-                                        .correoElectronico(incidente.getDenunciante().getCorreoElectronico())
-                                        .enElLugar(incidente.getDenunciante().getEnElLugar())
-                                        .build();
-                        dto.setDenunciante(denDto);
-                }
+                // Datos del Denunciante (Protección PII y Anonimización - ISO 27001 A.8.11)
+                dto.setDenunciante(com.conectatech.sgs_backend.util.PiiMaskingUtils.buildSanitizedDenunciante(
+                                incidente.getDenunciante(), incidente.isEsAnonimo()));
                 dto.setEsAnonimo(incidente.isEsAnonimo());
 
                 return dto;
