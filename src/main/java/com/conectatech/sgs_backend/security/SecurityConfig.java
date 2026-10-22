@@ -32,9 +32,16 @@ public class SecurityConfig {
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .headers(headers -> headers
+                                                .contentSecurityPolicy(csp -> csp
+                                                                .policyDirectives("default-src 'self'; frame-ancestors 'none';"))
+                                                .frameOptions(frame -> frame.deny())
+                                                .contentTypeOptions(contentType -> {})
+                                                .httpStrictTransportSecurity(hsts -> hsts
+                                                                .includeSubDomains(true)
+                                                                .maxAgeInSeconds(31536000)))
                                 .authorizeHttpRequests(auth -> auth
-                                                // Rutas públicas: Autenticación, Swagger y ruta interna de errores de
-                                                // Spring
+                                                // Rutas públicas: Autenticación, Swagger y ruta interna de errores de Spring
                                                 .requestMatchers(
                                                                 "/api/v1/auth/login",
                                                                 "/api/v1/auth/register",
@@ -43,8 +50,7 @@ public class SecurityConfig {
                                                                 "/error",
                                                                 "/v3/api-docs/**",
                                                                 "/scalar.html",
-                                                                "/ws-notificaciones/**",
-                                                                "/api/v1/incidentes/evidencias/**")
+                                                                "/ws-notificaciones/**")
                                                 .permitAll()
 
                                                 // Módulo de Administración
@@ -69,6 +75,10 @@ public class SecurityConfig {
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/configuracion/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+
+                                                // Módulo de Incidentes - Evidencias Multimedia (GridFS protegida)
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/incidentes/evidencias/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR", "CIUDADANO")
 
                                                 // Módulo de Incidentes
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/incidentes/*/evidencia")

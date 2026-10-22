@@ -46,8 +46,15 @@ public class AuthService {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El RUN ya está registrado.");
                 }
 
-                // Asignar rol CIUDADANO por defecto si viene nulo
-                RolUsuario rol = request.getRol() != null ? request.getRol() : RolUsuario.CIUDADANO;
+                // Identificar actor de la petición y validar privilegios (ISO 27001 A.5.15 / A.8.2)
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                boolean esAdmin = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
+
+                // Blindaje contra escalamiento de privilegios:
+                // El auto-registro público SIEMPRE asigna RolUsuario.CIUDADANO.
+                // Solo un usuario con rol ADMINISTRADOR autenticado puede asignar roles privilegiados.
+                RolUsuario rol = (esAdmin && request.getRol() != null) ? request.getRol() : RolUsuario.CIUDADANO;
 
                 String nombreCompleto = (request.getSegundoApellido() != null && !request.getSegundoApellido().isBlank())
                                 ? request.getNombres() + " " + request.getPrimerApellido() + " " + request.getSegundoApellido().trim()
@@ -69,11 +76,10 @@ public class AuthService {
                 usuarioRepository.save(user);
 
                 // Registro en bitácora
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 String actorId = "SISTEMA";
                 String nombreActor = "Auto-registro";
                 String rolActor = "SISTEMA";
-                String comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por auto-registro";
+                String comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por auto-registro (Rol: " + user.getRol().name() + ")";
 
                 if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
                         try {
@@ -81,7 +87,7 @@ public class AuthService {
                                 actorId = actorAuth.getId();
                                 nombreActor = actorAuth.getNombreCompleto();
                                 rolActor = actorAuth.getRol().name();
-                                comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por " + nombreActor;
+                                comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por " + nombreActor + " (Rol: " + user.getRol().name() + ")";
                         } catch (Exception e) {
                                 // Fallback si el principal no es del tipo Usuario
                         }
