@@ -35,7 +35,7 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(
             @PathVariable String id,
-            @RequestBody UsuarioUpdateDTO updateDTO) {
+            @jakarta.validation.Valid @RequestBody UsuarioUpdateDTO updateDTO) {
 
         UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarUsuario(id, updateDTO);
         return ResponseEntity.ok(usuarioActualizado);
@@ -49,7 +49,7 @@ public class UsuarioController {
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UsuarioResponseDTO> actualizarMiPerfil(@RequestBody com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO updateDTO) {
+    public ResponseEntity<UsuarioResponseDTO> actualizarMiPerfil(@jakarta.validation.Valid @RequestBody com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO updateDTO) {
         UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarMiPerfil(updateDTO);
         return ResponseEntity.ok(usuarioActualizado);
     }

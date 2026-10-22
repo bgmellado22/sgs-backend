@@ -7,6 +7,7 @@ import com.conectatech.sgs_backend.dto.auth.ForgotPasswordRequest;
 import com.conectatech.sgs_backend.dto.auth.ResetPasswordRequest;
 import com.conectatech.sgs_backend.service.AuthService;
 import com.conectatech.sgs_backend.service.PasswordResetService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,24 +23,24 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         passwordResetService.processForgotPassword(request.getEmail());
         // Siempre devolvemos 200 OK por seguridad contra ataques de enumeración
         return ResponseEntity.ok("Si el correo existe, se ha enviado un enlace de recuperación.");
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         boolean success = passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
         if (success) {
             return ResponseEntity.ok("Contraseña actualizada correctamente.");

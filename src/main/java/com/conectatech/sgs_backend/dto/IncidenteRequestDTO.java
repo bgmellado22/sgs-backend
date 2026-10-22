@@ -41,6 +41,7 @@ public class IncidenteRequestDTO {
     @Size(min = 5, max = 200, message = "La referencia debe tener entre 5 y 200 caracteres")
     private String direccionTexto;
 
+    @jakarta.validation.Valid
     private DenuncianteDTO denunciante;
     private Boolean esAnonimo;
 }
