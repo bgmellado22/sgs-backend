@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -14,6 +16,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "bitacora_procedimientos")
+@CompoundIndexes({
+    @CompoundIndex(name = "idx_bitacora_fecha", def = "{'fechaModificacion': -1}"),
+    @CompoundIndex(name = "idx_bitacora_incidente_fecha", def = "{'incidenteId': 1, 'fechaModificacion': -1}"),
+    @CompoundIndex(name = "idx_bitacora_campo_fecha", def = "{'campoModificado': 1, 'fechaModificacion': -1}")
+})
 public class BitacoraProcedimiento {
 
     @Id

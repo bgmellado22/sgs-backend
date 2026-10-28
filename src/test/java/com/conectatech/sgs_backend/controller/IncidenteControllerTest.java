@@ -1,6 +1,7 @@
 package com.conectatech.sgs_backend.controller;
 
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
+import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.security.SecurityConfig;
 import com.conectatech.sgs_backend.service.IncidenteService;
 import org.junit.jupiter.api.DisplayName;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -146,5 +150,33 @@ public class IncidenteControllerTest {
         mockMvc.perform(delete("/api/v1/incidentes/incidente123")
                 .with(user("inspector").roles("INSPECTOR")))
                 .andExpect(status().isForbidden());
+    }
+
+    // Tests GET /api/v1/incidentes/bitacora/global
+
+    @Test
+    @DisplayName("GET /incidentes/bitacora/global con rol ADMINISTRADOR → 200 OK + Page JSON")
+    public void testObtenerBitacoraGlobal_ConRolAdmin_Retorna200() throws Exception {
+        BitacoraProcedimiento bitacora = BitacoraProcedimiento.builder()
+                .id("bit123")
+                .campoModificado("Estado")
+                .valorAnterior("Pendiente")
+                .valorNuevo("En proceso")
+                .nombreActor("Admin Test")
+                .rolActor("ADMINISTRADOR")
+                .fechaModificacion(LocalDateTime.now())
+                .build();
+
+        when(incidenteService.obtenerHistorialGlobalPaginado(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(bitacora), PageRequest.of(0, 20), 1));
+
+        mockMvc.perform(get("/api/v1/incidentes/bitacora/global")
+                .with(user("admin").roles("ADMINISTRADOR"))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].id").value("bit123"))
+                .andExpect(jsonPath("$.content[0].campoModificado").value("Estado"))
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 }

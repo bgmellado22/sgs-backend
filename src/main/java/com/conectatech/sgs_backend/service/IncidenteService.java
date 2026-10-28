@@ -52,6 +52,7 @@ public class IncidenteService {
         private final BitacoraProcedimientoRepository bitacoraRepository;
         private final ParametroSistemaRepository parametroRepository;
         private final GridFsTemplate gridFsTemplate;
+        private final AuditoriaService auditoriaService;
 
         // Guardar sin archivo (compatibilidad)
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto) {
@@ -341,28 +342,11 @@ public class IncidenteService {
                 return dto;
         }
 
-        // Método para auditar de forma dinámica
+        // Delegación unificada a AuditoriaService
         private void registrarAuditoria(String incidenteId, String codigoCorrelativo, Usuario actor, String campo,
                         String valorAnt, String valorNue,
                         String comentario) {
-                // Evitar generar registros basura si los valores son idénticos
-                if (Objects.equals(valorAnt, valorNue))
-                        return;
-
-                BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
-                                .incidenteId(incidenteId)
-                                .codigoCorrelativo(codigoCorrelativo)
-                                .usuarioId(actor.getId())
-                                .nombreActor(actor.getNombreCompleto())
-                                .rolActor(actor.getRol().name())
-                                .campoModificado(campo)
-                                .valorAnterior(valorAnt)
-                                .valorNuevo(valorNue)
-                                .comentario(comentario)
-                                .fechaModificacion(LocalDateTime.now())
-                                .build();
-
-                bitacoraRepository.save(registro);
+                auditoriaService.registrarAuditoria(incidenteId, codigoCorrelativo, actor, campo, valorAnt, valorNue, comentario);
         }
 
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado) {
@@ -539,9 +523,22 @@ public class IncidenteService {
                 return bitacoraRepository.findByIncidenteIdOrderByFechaModificacionDesc(incidenteId);
         }
 
-        // Obtener todo el historial
+        // Obtener todo el historial (sin paginar - compatibilidad)
         public List<BitacoraProcedimiento> obtenerHistorialGlobal() {
                 return bitacoraRepository.findAllByOrderByFechaModificacionDesc();
+        }
+
+        // Obtener historial global paginado con filtros avanzados
+        public Page<BitacoraProcedimiento> obtenerHistorialGlobalPaginado(
+                        String textoBusqueda,
+                        String modulo,
+                        String tipoOperacion,
+                        String rolActor,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin,
+                        Pageable pageable) {
+                return bitacoraRepository.buscarConFiltrosPaginado(
+                                textoBusqueda, modulo, tipoOperacion, rolActor, fechaInicio, fechaFin, pageable);
         }
 
         // Método para eliminar un incidente

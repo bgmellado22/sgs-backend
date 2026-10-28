@@ -5,10 +5,12 @@ import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -21,28 +23,38 @@ public class AuditoriaService {
      * Extrae el usuario actual del contexto de seguridad.
      */
     public Usuario getUsuarioActual() {
-        if (SecurityContextHolder.getContext().getAuthentication() != null &&
-                SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof Usuario) {
-            return (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Usuario) {
+            return (Usuario) auth.getPrincipal();
         }
         return null;
     }
 
     /**
-     * Registra un evento en la bitácora de auditoría.
+     * Registro centralizado y unificado de auditoría forense con trazabilidad de incidente y actor explícito.
      */
-    public void registrarAuditoria(String campoModificado, String valorAnterior, String valorNuevo, String comentario) {
-        Usuario actor = getUsuarioActual();
-
-        if (actor == null) {
-            log.warn("No se pudo registrar en auditoría: No hay un usuario autenticado en el contexto.");
+    public void registrarAuditoria(String incidenteId, String codigoCorrelativo, Usuario actor,
+                                   String campoModificado, String valorAnterior, String valorNuevo,
+                                   String comentario) {
+        // Evitar generar registros basura si los valores son idénticos
+        if (Objects.equals(valorAnterior, valorNuevo)) {
             return;
         }
 
+        if (actor == null) {
+            actor = getUsuarioActual();
+        }
+
+        String usuarioId = actor != null ? actor.getId() : "SISTEMA";
+        String nombreActor = actor != null ? actor.getNombreCompleto() : "Sistema";
+        String rolActor = actor != null && actor.getRol() != null ? actor.getRol().name() : "SISTEMA";
+
         BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
-                .usuarioId(actor.getId())
-                .nombreActor(actor.getNombreCompleto())
-                .rolActor(actor.getRol().name())
+                .incidenteId(incidenteId)
+                .codigoCorrelativo(codigoCorrelativo)
+                .usuarioId(usuarioId)
+                .nombreActor(nombreActor)
+                .rolActor(rolActor)
                 .campoModificado(campoModificado)
                 .valorAnterior(valorAnterior)
                 .valorNuevo(valorNuevo)
@@ -51,6 +63,48 @@ public class AuditoriaService {
                 .build();
 
         bitacoraRepository.save(registro);
-        log.info("Auditoría forense registrada: {}", comentario);
+        log.info("Auditoría forense registrada: [Campo: {}, Actor: {}, Incidente: {}] - {}",
+                campoModificado, nombreActor, codigoCorrelativo != null ? codigoCorrelativo : "N/A", comentario);
+    }
+
+    /**
+     * Overload con actor extraído automáticamente de SecurityContext.
+     */
+    public void registrarAuditoria(String incidenteId, String codigoCorrelativo,
+                                   String campoModificado, String valorAnterior, String valorNuevo,
+                                   String comentario) {
+        registrarAuditoria(incidenteId, codigoCorrelativo, getUsuarioActual(), campoModificado, valorAnterior, valorNuevo, comentario);
+    }
+
+    /**
+     * Overload para eventos de configuración, catálogos o usuarios sin incidente asociado.
+     */
+    public void registrarAuditoria(String campoModificado, String valorAnterior, String valorNuevo, String comentario) {
+        registrarAuditoria(null, null, getUsuarioActual(), campoModificado, valorAnterior, valorNuevo, comentario);
+    }
+
+    /**
+     * Overload para casos donde el actor se especifica manualmente (p. ej. auto-registro público).
+     */
+    public void registrarAuditoriaManual(String usuarioId, String nombreActor, String rolActor,
+                                         String campoModificado, String valorAnterior, String valorNuevo,
+                                         String comentario) {
+        if (Objects.equals(valorAnterior, valorNuevo)) {
+            return;
+        }
+
+        BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
+                .usuarioId(usuarioId)
+                .nombreActor(nombreActor)
+                .rolActor(rolActor)
+                .campoModificado(campoModificado)
+                .valorAnterior(valorAnterior)
+                .valorNuevo(valorNuevo)
+                .comentario(comentario)
+                .fechaModificacion(LocalDateTime.now())
+                .build();
+
+        bitacoraRepository.save(registro);
+        log.info("Auditoría forense registrada manualmente: [Campo: {}, Actor: {}] - {}", campoModificado, nombreActor, comentario);
     }
 }

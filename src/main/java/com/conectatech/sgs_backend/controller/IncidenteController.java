@@ -144,10 +144,19 @@ public class IncidenteController {
         return ResponseEntity.ok(incidenteService.obtenerHistorial(id));
     }
 
-    // Historial Global
+    // Historial Global Paginado con Filtros
     @GetMapping("/bitacora/global")
-    public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacoraGlobal() {
-        return ResponseEntity.ok(incidenteService.obtenerHistorialGlobal());
+    public ResponseEntity<Page<BitacoraProcedimiento>> obtenerBitacoraGlobal(
+            @RequestParam(required = false) String textoBusqueda,
+            @RequestParam(required = false) String modulo,
+            @RequestParam(required = false) String tipoOperacion,
+            @RequestParam(required = false) String rolActor,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+            @PageableDefault(size = 20, sort = "fechaModificacion", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<BitacoraProcedimiento> pagina = incidenteService.obtenerHistorialGlobalPaginado(
+                textoBusqueda, modulo, tipoOperacion, rolActor, fechaInicio, fechaFin, pageable);
+        return ResponseEntity.ok(pagina);
     }
 
     // Buscar

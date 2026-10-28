@@ -1,29 +1,26 @@
 package com.conectatech.sgs_backend.service;
 
+import com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO;
 import com.conectatech.sgs_backend.dto.UsuarioResponseDTO;
 import com.conectatech.sgs_backend.dto.UsuarioUpdateDTO;
-import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.model.enums.RolUsuario;
-import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 @RequiredArgsConstructor
 public class UsuarioService {
 
         private final UsuarioRepository usuarioRepository;
-        private final BitacoraProcedimientoRepository bitacoraRepository;
+        private final AuditoriaService auditoriaService;
         private final PasswordEncoder passwordEncoder;
 
         // Obtener usuarios
@@ -50,6 +47,9 @@ public class UsuarioService {
                 Usuario usuario = usuarioRepository.findById(id)
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
 
+                RolUsuario rolAnterior = usuario.getRol();
+                String emailAnterior = usuario.getEmail();
+
                 if (dto.getNombres() != null) {
                         usuario.setNombres(dto.getNombres());
                 }
@@ -70,6 +70,12 @@ public class UsuarioService {
                 usuario.setRol(dto.getRol());
 
                 Usuario usuarioActualizado = usuarioRepository.save(usuario);
+
+                // Registro de auditoría unificado
+                String valorAnt = String.format("Rol: %s, Email: %s", rolAnterior, emailAnterior);
+                String valorNue = String.format("Rol: %s, Email: %s", usuarioActualizado.getRol(), usuarioActualizado.getEmail());
+                auditoriaService.registrarAuditoria("USUARIO_MODIFICACION", valorAnt, valorNue,
+                                "Edición de usuario " + usuarioActualizado.getNombreCompleto());
 
                 return UsuarioResponseDTO.builder()
                                 .id(usuarioActualizado.getId())
@@ -141,24 +147,13 @@ public class UsuarioService {
 
                 Usuario usuarioActualizado = usuarioRepository.save(usuario);
 
-                // Registro en bitácora
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                Usuario actor = (Usuario) auth.getPrincipal();
-
-                BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
-                                .incidenteId(null)
-                                .usuarioId(actor.getId())
-                                .nombreActor(actor.getNombreCompleto())
-                                .rolActor(actor.getRol().name())
-                                .campoModificado("Estado Usuario")
-                                .valorAnterior(estadoAnterior)
-                                .valorNuevo(estadoNuevo)
-                                .comentario("Usuario " + usuario.getNombreCompleto() + " fue "
-                                                + estadoNuevo.toLowerCase() + " por " + actor.getNombreCompleto())
-                                .fechaModificacion(LocalDateTime.now())
-                                .build();
-
-                bitacoraRepository.save(registro);
+                // Registro en bitácora unificado
+                auditoriaService.registrarAuditoria(
+                                "USUARIO_ESTADO",
+                                estadoAnterior,
+                                estadoNuevo,
+                                "Usuario " + usuario.getNombreCompleto() + " fue " + estadoNuevo.toLowerCase()
+                );
 
                 return UsuarioResponseDTO.builder()
                                 .id(usuarioActualizado.getId())

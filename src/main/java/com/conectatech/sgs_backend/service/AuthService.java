@@ -5,10 +5,8 @@ import com.conectatech.sgs_backend.dto.auth.LoginRequest;
 import com.conectatech.sgs_backend.dto.auth.RegisterRequest;
 import com.conectatech.sgs_backend.exception.CuentaBloqueadaException;
 import com.conectatech.sgs_backend.exception.CredencialesIncorrectasException;
-import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.model.enums.RolUsuario;
-import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import com.conectatech.sgs_backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +33,7 @@ public class AuthService {
         private final PasswordEncoder passwordEncoder;
         private final JwtUtil jwtUtil;
         private final AuthenticationManager authenticationManager;
-        private final BitacoraProcedimientoRepository bitacoraRepository;
+        private final AuditoriaService auditoriaService;
 
         public AuthResponse register(RegisterRequest request) {
                 // Validar duplicados antes de guardar
@@ -75,7 +73,7 @@ public class AuthService {
 
                 usuarioRepository.save(user);
 
-                // Registro en bitácora
+                // Registro en bitácora mediante AuditoriaService
                 String actorId = "SISTEMA";
                 String nombreActor = "Auto-registro";
                 String rolActor = "SISTEMA";
@@ -93,19 +91,15 @@ public class AuthService {
                         }
                 }
 
-                BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
-                                .incidenteId(null)
-                                .usuarioId(actorId)
-                                .nombreActor(nombreActor)
-                                .rolActor(rolActor)
-                                .campoModificado("Registro Usuario")
-                                .valorAnterior(null)
-                                .valorNuevo("Activo")
-                                .comentario(comentario)
-                                .fechaModificacion(LocalDateTime.now())
-                                .build();
-
-                bitacoraRepository.save(registro);
+                auditoriaService.registrarAuditoriaManual(
+                                actorId,
+                                nombreActor,
+                                rolActor,
+                                "USUARIO_REGISTRO",
+                                null,
+                                "Activo",
+                                comentario
+                );
 
                 var jwtToken = jwtUtil.generateToken(user);
                 return AuthResponse.builder()
