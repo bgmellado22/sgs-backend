@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Repository
@@ -44,13 +45,14 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
         // Búsqueda por texto (descripción, código correlativo o datos del denunciante)
         if (textoBusqueda != null && !textoBusqueda.isBlank()) {
+            String regex = Pattern.quote(textoBusqueda.trim());
             Criteria textoCriteria = new Criteria().orOperator(
-                    Criteria.where("descripcion").regex(textoBusqueda, "i"),
-                    Criteria.where("codigoCorrelativo").regex(textoBusqueda, "i"),
-                    Criteria.where("denunciante.nombres").regex(textoBusqueda, "i"),
-                    Criteria.where("denunciante.primer_apellido").regex(textoBusqueda, "i"),
-                    Criteria.where("denunciante.run").regex(textoBusqueda, "i"),
-                    Criteria.where("denunciante.telefono").regex(textoBusqueda, "i"));
+                    Criteria.where("descripcion").regex(regex, "i"),
+                    Criteria.where("codigoCorrelativo").regex(regex, "i"),
+                    Criteria.where("denunciante.nombres").regex(regex, "i"),
+                    Criteria.where("denunciante.primer_apellido").regex(regex, "i"),
+                    Criteria.where("denunciante.run").regex(regex, "i"),
+                    Criteria.where("denunciante.telefono").regex(regex, "i"));
             criterios.add(textoCriteria);
         }
 

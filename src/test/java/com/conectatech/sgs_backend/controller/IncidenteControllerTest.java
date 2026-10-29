@@ -179,4 +179,38 @@ public class IncidenteControllerTest {
                 .andExpect(jsonPath("$.content[0].campoModificado").value("Estado"))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
+
+    @Test
+    @DisplayName("GET /incidentes/paginado con caracteres regex especiales → 200 OK")
+    public void testObtenerIncidentesPaginado_ConCaracteresRegexEspeciales_Retorna200() throws Exception {
+        IncidenteResponseDTO dto = new IncidenteResponseDTO();
+        dto.setId("inc-paginado-1");
+        dto.setCodigoCorrelativo("INC-999");
+        dto.setDescripcion("Prueba con teléfono +569 1234 (urgente)");
+
+        when(incidenteService.buscarIncidentesAvanzadoPaginado(any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1));
+
+        mockMvc.perform(get("/api/v1/incidentes/paginado")
+                .param("textoBusqueda", "+569 (1234) [urgente]*")
+                .with(user("operador").roles("OPERADOR"))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("inc-paginado-1"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("DELETE /incidentes/{id} cuando no existe → 404 Not Found")
+    public void testEliminarIncidente_NoExiste_Retorna404() throws Exception {
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.NOT_FOUND, "Incidente no encontrado con ID: no-existe"))
+                .when(incidenteService).eliminarIncidente("no-existe");
+
+        mockMvc.perform(delete("/api/v1/incidentes/no-existe")
+                .with(user("admin").roles("ADMINISTRADOR"))
+                .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Incidente no encontrado con ID: no-existe"));
+    }
 }

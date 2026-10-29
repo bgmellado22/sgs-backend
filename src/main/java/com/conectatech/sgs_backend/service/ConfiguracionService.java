@@ -8,11 +8,14 @@ import com.conectatech.sgs_backend.repository.ParametroSistemaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -88,7 +91,7 @@ public class ConfiguracionService {
      */
     public void eliminarParametro(String id) {
         ParametroSistema parametro = parametroSistemaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Parámetro no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parámetro no encontrado con ID: " + id));
 
         parametroSistemaRepository.delete(parametro);
 
@@ -169,7 +172,7 @@ public class ConfiguracionService {
     @CacheEvict(value = "catalogos", allEntries = true)
     public Catalogo editarCatalogo(String id, Catalogo catalogoActualizado) {
         Catalogo existente = catalogoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catálogo no encontrado con ID: " + id));
 
         if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
             throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo()
@@ -230,8 +233,8 @@ public class ConfiguracionService {
         }
 
         // 2. Registrar modificación de propiedades SOLO si hubo cambios reales
-        boolean cambioEtiqueta = !etiquetaAnterior.equals(guardado.getEtiqueta());
-        boolean cambioVisual = !visualAnterior.equals(visualNuevo);
+        boolean cambioEtiqueta = !Objects.equals(etiquetaAnterior, guardado.getEtiqueta());
+        boolean cambioVisual = !Objects.equals(visualAnterior, visualNuevo);
 
         if (cambioEtiqueta || cambioVisual) {
             String difVisual = "";
@@ -279,7 +282,7 @@ public class ConfiguracionService {
     @CacheEvict(value = "catalogos", allEntries = true)
     public void eliminarCatalogo(String id) {
         Catalogo existente = catalogoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Catálogo no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catálogo no encontrado con ID: " + id));
 
         if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
             throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo()

@@ -7,10 +7,12 @@ import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.model.enums.RolUsuario;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -45,7 +47,7 @@ public class UsuarioService {
         // Actualizar usuario
         public UsuarioResponseDTO actualizarUsuario(String id, UsuarioUpdateDTO dto) {
                 Usuario usuario = usuarioRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con ID: " + id));
 
                 RolUsuario rolAnterior = usuario.getRol();
                 String emailAnterior = usuario.getEmail();
@@ -92,12 +94,14 @@ public class UsuarioService {
 
         // Actualizar mi propio perfil
         public UsuarioResponseDTO actualizarMiPerfil(MiPerfilUpdateDTO dto) {
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                Usuario actor = (Usuario) auth.getPrincipal();
+                Usuario actor = auditoriaService.getUsuarioActual();
+                if (actor == null) {
+                        throw new IllegalArgumentException("No hay una sesión activa para actualizar el perfil.");
+                }
 
                 Usuario usuario = usuarioRepository.findById(actor.getId())
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Usuario no encontrado con ID: " + actor.getId()));
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Usuario no encontrado con ID: " + actor.getId()));
 
                 if (dto.getNombres() != null) {
                         usuario.setNombres(dto.getNombres());
@@ -139,11 +143,12 @@ public class UsuarioService {
         // Cambiar estado del usuario
         public UsuarioResponseDTO cambiarEstadoUsuario(String id) {
                 Usuario usuario = usuarioRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con ID: " + id));
 
-                String estadoAnterior = Boolean.TRUE.equals(usuario.getEstado()) ? "Activo" : "Inactivo";
-                usuario.setEstado(!usuario.getEstado());
-                String estadoNuevo = Boolean.TRUE.equals(usuario.getEstado()) ? "Activo" : "Inactivo";
+                boolean estadoActual = Boolean.TRUE.equals(usuario.getEstado());
+                String estadoAnterior = estadoActual ? "Activo" : "Inactivo";
+                usuario.setEstado(!estadoActual);
+                String estadoNuevo = !estadoActual ? "Activo" : "Inactivo";
 
                 Usuario usuarioActualizado = usuarioRepository.save(usuario);
 

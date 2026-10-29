@@ -18,7 +18,9 @@ import com.conectatech.sgs_backend.repository.ParametroSistemaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -72,7 +74,8 @@ public class IncidenteService {
                 incidente.setLocation(puntoGPS);
                 incidente.setDireccionTexto(dto.getDireccionTexto());
 
-                incidente.setCodigoCorrelativo("INC-" + (int) (Math.random() * 900 + 100));
+                long correlativoUnico = (System.currentTimeMillis() % 900000L) + 100000L;
+                incidente.setCodigoCorrelativo("INC-" + correlativoUnico);
                 incidente.setEstado("Pendiente");
                 incidente.setFechaCreacion(LocalDateTime.now());
 
@@ -220,7 +223,7 @@ public class IncidenteService {
                         file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(gridFsId)));
                 }
                 if (file == null) {
-                        throw new RuntimeException("Evidencia no encontrada con ID: " + gridFsId);
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Evidencia no encontrada con ID: " + gridFsId);
                 }
                 return gridFsTemplate.getResource(file);
         }
@@ -228,7 +231,7 @@ public class IncidenteService {
         // Gestión Operativa: Derivar denuncia a Carabineros o Municipalidad
         public IncidenteResponseDTO derivarIncidente(String id, DerivacionRequestDTO dto) {
                 Incidente incidente = incidenteRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Incidente no encontrado con el ID: " + id));
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
 
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
@@ -356,8 +359,8 @@ public class IncidenteService {
         // Método para actualizar el estado de un incidente con auditoría y motivo explicativo
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo) {
                 Incidente incidenteExistente = incidenteRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Error: Incidente no encontrado con el ID: " + id));
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
 
                 String estadoAnterior = incidenteExistente.getEstado();
 
@@ -411,8 +414,8 @@ public class IncidenteService {
         // Método para edición completa de un incidente con auditoría
         public IncidenteResponseDTO editarIncidente(String id, IncidenteRequestDTO dto) {
                 Incidente incidente = incidenteRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Error: Incidente no encontrado con el ID: " + id));
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
 
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
@@ -544,8 +547,8 @@ public class IncidenteService {
         // Método para eliminar un incidente
         public void eliminarIncidente(String id) {
                 Incidente incidenteExistente = incidenteRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Error: No se puede eliminar. Incidente no encontrado con ID: " + id));
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Incidente no encontrado con ID: " + id));
 
                 incidenteExistente.setActivo(false);
 

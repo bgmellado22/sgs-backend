@@ -56,6 +56,9 @@ public class SecurityConfig {
                                                 // Módulo de Administración
                                                 .requestMatchers("/api/v1/usuarios/inspectores")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+                                                // Edición de perfil propio permitida para cualquier usuario autenticado
+                                                .requestMatchers(HttpMethod.PUT, "/api/v1/usuarios/me")
+                                                .authenticated()
                                                 // Lectura de catálogos (formularios y colores de badges);
                                                 // la escritura va por /api/v1/configuracion (solo ADMINISTRADOR)
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/**")
