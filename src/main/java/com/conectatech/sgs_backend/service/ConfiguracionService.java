@@ -31,7 +31,8 @@ public class ConfiguracionService {
      * Tipos de catálogo administrables dinámicamente.
      * Prioridad y Categoría son estándares fijos inmutables.
      */
-    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "TIPO_INCIDENTE");
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "TIPO_INCIDENTE", "UNIDAD_POLICIAL",
+            "RESULTADO_PROCEDIMIENTO");
 
     /**
      * Etiquetas legibles para el mensaje de auditoría por tipo.
@@ -40,7 +41,9 @@ public class ConfiguracionService {
             "ORIGEN", "Origen de denuncia",
             "PRIORIDAD", "Prioridad",
             "CATEGORIA", "Categoría",
-            "TIPO_INCIDENTE", "Tipo de Incidente");
+            "TIPO_INCIDENTE", "Tipo de Incidente",
+            "UNIDAD_POLICIAL", "Unidad Policial",
+            "RESULTADO_PROCEDIMIENTO", "Resultado de Procedimiento");
 
     // ──────────────────────────────────────────────
     // PARÁMETROS DEL SISTEMA (Tiempos de Respuesta y otros)
@@ -91,7 +94,8 @@ public class ConfiguracionService {
      */
     public void eliminarParametro(String id) {
         ParametroSistema parametro = parametroSistemaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parámetro no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Parámetro no encontrado con ID: " + id));
 
         parametroSistemaRepository.delete(parametro);
 
@@ -172,7 +176,8 @@ public class ConfiguracionService {
     @CacheEvict(value = "catalogos", allEntries = true)
     public Catalogo editarCatalogo(String id, Catalogo catalogoActualizado) {
         Catalogo existente = catalogoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catálogo no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catálogo no encontrado con ID: " + id));
 
         if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
             throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo()
@@ -282,7 +287,8 @@ public class ConfiguracionService {
     @CacheEvict(value = "catalogos", allEntries = true)
     public void eliminarCatalogo(String id) {
         Catalogo existente = catalogoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Catálogo no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catálogo no encontrado con ID: " + id));
 
         if ("PRIORIDAD".equalsIgnoreCase(existente.getTipo()) || "CATEGORIA".equalsIgnoreCase(existente.getTipo())) {
             throw new IllegalArgumentException("Los catálogos estándar de " + existente.getTipo()
