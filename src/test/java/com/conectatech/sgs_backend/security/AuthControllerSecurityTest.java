@@ -6,6 +6,7 @@ import com.conectatech.sgs_backend.dto.auth.LoginRequest;
 import com.conectatech.sgs_backend.dto.auth.RegisterRequest;
 import com.conectatech.sgs_backend.model.enums.RolUsuario;
 import com.conectatech.sgs_backend.service.AuthService;
+import com.conectatech.sgs_backend.service.ClaveUnicaService;
 import com.conectatech.sgs_backend.service.PasswordResetService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +41,9 @@ public class AuthControllerSecurityTest {
 
     @MockitoBean
     private PasswordResetService passwordResetService;
+
+    @MockitoBean
+    private ClaveUnicaService claveUnicaService;
 
     @MockitoBean
     private JwtUtil jwtUtil;
@@ -151,5 +155,30 @@ public class AuthControllerSecurityTest {
     public void testEvidencias_SinAutenticacion_Retorna403() throws Exception {
         mockMvc.perform(get("/api/v1/incidentes/evidencias/foto123.jpg"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /claveunica/callback con datos válidos → 200 OK")
+    public void testClaveUnicaCallback_Exitoso() throws Exception {
+        com.conectatech.sgs_backend.dto.claveunica.ClaveUnicaCallbackRequest request =
+                com.conectatech.sgs_backend.dto.claveunica.ClaveUnicaCallbackRequest.builder()
+                        .code("CODE_44444444_4")
+                        .state("mock-state-csrf-12345678901234567890")
+                        .canal("WEB")
+                        .build();
+
+        AuthResponse authResponse = AuthResponse.builder()
+                .token("mock-token-jwt")
+                .rol("ADMINISTRADOR")
+                .build();
+
+        when(claveUnicaService.procesarLoginClaveUnica(any())).thenReturn(authResponse);
+
+        mockMvc.perform(post("/api/v1/auth/claveunica/callback")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("mock-token-jwt"))
+                .andExpect(jsonPath("$.rol").value("ADMINISTRADOR"));
     }
 }

@@ -5,7 +5,9 @@ import com.conectatech.sgs_backend.dto.auth.LoginRequest;
 import com.conectatech.sgs_backend.dto.auth.RegisterRequest;
 import com.conectatech.sgs_backend.dto.auth.ForgotPasswordRequest;
 import com.conectatech.sgs_backend.dto.auth.ResetPasswordRequest;
+import com.conectatech.sgs_backend.dto.claveunica.ClaveUnicaCallbackRequest;
 import com.conectatech.sgs_backend.service.AuthService;
+import com.conectatech.sgs_backend.service.ClaveUnicaService;
 import com.conectatech.sgs_backend.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,13 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final ClaveUnicaService claveUnicaService;
     private final PasswordResetService passwordResetService;
+
+    @PostMapping("/claveunica/callback")
+    public ResponseEntity<AuthResponse> loginClaveUnica(@Valid @RequestBody ClaveUnicaCallbackRequest request) {
+        return ResponseEntity.ok(claveUnicaService.procesarLoginClaveUnica(request));
+    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
