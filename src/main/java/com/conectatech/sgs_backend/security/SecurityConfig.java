@@ -63,6 +63,10 @@ public class SecurityConfig {
                                                 // la escritura va por /api/v1/configuracion (solo ADMINISTRADOR)
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR", "CIUDADANO")
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/usuarios")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                .requestMatchers(HttpMethod.PATCH, "/api/v1/usuarios/*/estado")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                                                 .requestMatchers("/api/v1/usuarios/**", "/api/v1/catalogos/**")
                                                 .hasRole("ADMINISTRADOR")
 

@@ -25,7 +25,7 @@ public class UsuarioController {
         return ResponseEntity.ok(inspectores);
     }
 
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     @GetMapping
     public ResponseEntity<List<UsuarioResponseDTO>> obtenerUsuarios() {
         return ResponseEntity.ok(usuarioService.obtenerTodosLosUsuarios());
@@ -41,7 +41,7 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioActualizado);
     }
 
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     @PatchMapping("/{id}/estado")
     public ResponseEntity<UsuarioResponseDTO> cambiarEstadoUsuario(@PathVariable String id) {
         UsuarioResponseDTO usuarioActualizado = usuarioService.cambiarEstadoUsuario(id);
