@@ -94,10 +94,10 @@ public class UsuarioSecurityTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/usuarios con rol OPERADOR → 403 Forbidden")
-    public void testListarUsuarios_ConRolOperador_Retorna403() throws Exception {
+    @DisplayName("GET /api/v1/usuarios con rol CIUDADANO → 403 Forbidden")
+    public void testListarUsuarios_ConRolCiudadano_Retorna403() throws Exception {
         mockMvc.perform(get("/api/v1/usuarios")
-                .with(user("operador").roles("OPERADOR")))
+                .with(user("ciudadano").roles("CIUDADANO")))
                 .andExpect(status().isForbidden());
     }
 }

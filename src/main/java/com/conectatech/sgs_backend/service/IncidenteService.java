@@ -1,6 +1,8 @@
 package com.conectatech.sgs_backend.service;
 
 import com.conectatech.sgs_backend.dto.DerivacionRequestDTO;
+import com.conectatech.sgs_backend.dto.DerivacionPolicialDTO;
+import com.conectatech.sgs_backend.dto.DespachoMunicipalDTO;
 import com.conectatech.sgs_backend.dto.DenuncianteDTO;
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
@@ -228,6 +230,166 @@ public class IncidenteService {
                 return gridFsTemplate.getResource(file);
         }
 
+        // Obtener recurso GridFS de comprobante PDF de derivación
+        public GridFsResource obtenerComprobanteDerivacion(String id) {
+                Incidente incidente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con ID: " + id));
+
+                String gridFsId = incidente.getComprobantePdfId();
+                if (gridFsId == null || gridFsId.isBlank()) {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El incidente no cuenta con comprobante PDF adjunto.");
+                }
+
+                GridFSFile file = null;
+                if (ObjectId.isValid(gridFsId)) {
+                        file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(new ObjectId(gridFsId))));
+                }
+                if (file == null) {
+                        file = gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(gridFsId)));
+                }
+                if (file == null) {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Archivo de comprobante no encontrado en GridFS con ID: " + gridFsId);
+                }
+                return gridFsTemplate.getResource(file);
+        }
+
+        // Gestión Operativa: Derivación Interinstitucional a Carabineros de Chile
+        public IncidenteResponseDTO derivarACarabineros(String id, DerivacionPolicialDTO dto, MultipartFile comprobantePdf) {
+                Incidente incidente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
+
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                Usuario actor = (Usuario) auth.getPrincipal();
+
+                String estadoAnterior = incidente.getEstado() != null ? incidente.getEstado() : "Pendiente";
+
+                String comprobantePdfId = null;
+                boolean tienePdf = false;
+                if (comprobantePdf != null && !comprobantePdf.isEmpty()) {
+                        if (comprobantePdf.getSize() > MAX_FILE_SIZE_BYTES) {
+                                throw new IllegalArgumentException("El archivo excede el tamaño máximo permitido de 10MB.");
+                        }
+                        String contentType = comprobantePdf.getContentType();
+                        if (contentType == null || !contentType.equalsIgnoreCase("application/pdf")) {
+                                throw new IllegalArgumentException("Solo se permite adjuntar comprobantes en formato application/pdf.");
+                        }
+                        try {
+                                ObjectId fileId = gridFsTemplate.store(
+                                                comprobantePdf.getInputStream(),
+                                                comprobantePdf.getOriginalFilename(),
+                                                "application/pdf"
+                                );
+                                comprobantePdfId = fileId.toHexString();
+                                tienePdf = true;
+                        } catch (IOException e) {
+                                log.error("Error al almacenar comprobante PDF de derivación para incidente: {}", id, e);
+                                throw new RuntimeException("Error al procesar el archivo PDF: " + e.getMessage());
+                        }
+                }
+
+                incidente.setDerivado(true);
+                incidente.setDerivacionEntidad("CARABINEROS");
+                incidente.setDerivacionDetalle(dto.getDestacamentoReceptor());
+                incidente.setDestacamentoReceptor(dto.getDestacamentoReceptor());
+                incidente.setViaComunicacion(dto.getViaComunicacion());
+                incidente.setFolioDerivacion(dto.getFolioDerivacion());
+                incidente.setDerivacionObservacion(dto.getAntecedentesInformados());
+                if (comprobantePdfId != null) {
+                        incidente.setComprobantePdfId(comprobantePdfId);
+                }
+                incidente.setFechaDerivacion(LocalDateTime.now());
+                incidente.setDerivadoPor(actor.getNombreCompleto());
+                incidente.setEstado("Derivado");
+
+                Incidente guardado = incidenteRepository.save(incidente);
+
+                String comentarioBitacora = String.format(
+                                "Derivado a Carabineros (%s) vía %s. Folio: %s. Respaldo PDF: %s%s",
+                                dto.getDestacamentoReceptor(),
+                                dto.getViaComunicacion(),
+                                dto.getFolioDerivacion(),
+                                (tienePdf ? "Adjunto" : "No adjunto"),
+                                (dto.getAntecedentesInformados() != null && !dto.getAntecedentesInformados().isBlank()
+                                                ? " | Antecedentes: " + dto.getAntecedentesInformados().trim()
+                                                : "")
+                );
+
+                registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
+                                "Estado y Derivación Policial", estadoAnterior, "Derivado",
+                                comentarioBitacora);
+
+                Notificacion alertaDerivacion = Notificacion.builder()
+                                .titulo("Incidente Derivado a Carabineros")
+                                .mensaje("El operador " + actor.getNombreCompleto() + " derivó el incidente "
+                                                + guardado.getCodigoCorrelativo() + " a Carabineros ("
+                                                + dto.getDestacamentoReceptor() + ") con Folio " + dto.getFolioDerivacion())
+                                .tipo(TipoNotificacion.INFORMATIVO)
+                                .referenciaId(guardado.getId())
+                                .usuarioDestinoId("GLOBAL")
+                                .build();
+                websocketService.despacharAlertaGlobal(alertaDerivacion);
+
+                return mapToDTO(guardado);
+        }
+
+        // Gestión Operativa: Despacho Interno Municipal (Seguridad Ciudadana / OS-14)
+        public IncidenteResponseDTO despacharMunicipal(String id, DespachoMunicipalDTO dto) {
+                Incidente incidente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
+
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                Usuario actor = (Usuario) auth.getPrincipal();
+
+                String estadoAnterior = incidente.getEstado() != null ? incidente.getEstado() : "Pendiente";
+                boolean esOS14 = "OS14".equalsIgnoreCase(dto.getTipoPatrullaje());
+
+                incidente.setDerivado(true);
+                incidente.setDerivacionEntidad("MUNICIPALIDAD");
+                incidente.setTipoPatrullaje(dto.getTipoPatrullaje());
+                incidente.setDerivacionInspectorId(dto.getInspectorId());
+                incidente.setDerivacionInspectorNombre(dto.getInspectorNombre());
+                incidente.setDerivacionDetalle(
+                                (dto.getInspectorNombre() != null && !dto.getInspectorNombre().isBlank()
+                                                ? dto.getInspectorNombre()
+                                                : "Patrulla Municipal")
+                                + (esOS14 ? " [Patrullaje Mixto Convenio OS-14]" : "")
+                );
+                incidente.setDerivacionObservacion(dto.getInstrucciones());
+                incidente.setFechaDerivacion(LocalDateTime.now());
+                incidente.setDerivadoPor(actor.getNombreCompleto());
+                incidente.setEstado("En proceso");
+
+                Incidente guardado = incidenteRepository.save(incidente);
+
+                String modalidadTexto = esOS14 ? "Patrullaje Mixto (Convenio OS-14)" : "Patrullaje Municipal Ordinario";
+                String comentarioBitacora = String.format(
+                                "Despacho municipal asignado a %s. Modalidad: %s.%s",
+                                (dto.getInspectorNombre() != null && !dto.getInspectorNombre().isBlank()
+                                                ? dto.getInspectorNombre()
+                                                : "Dotación en Terreno"),
+                                modalidadTexto,
+                                (dto.getInstrucciones() != null && !dto.getInstrucciones().isBlank()
+                                                ? " Instrucciones: " + dto.getInstrucciones().trim()
+                                                : "")
+                );
+
+                registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
+                                "Despacho Municipal", estadoAnterior, "En proceso",
+                                comentarioBitacora);
+
+                Notificacion alertaDespacho = Notificacion.builder()
+                                .titulo("Despacho Municipal Activo")
+                                .mensaje("El operador " + actor.getNombreCompleto() + " despachó el incidente "
+                                                + guardado.getCodigoCorrelativo() + " a Seguridad Municipal (" + modalidadTexto + ")")
+                                .tipo(TipoNotificacion.INFORMATIVO)
+                                .referenciaId(guardado.getId())
+                                .usuarioDestinoId("GLOBAL")
+                                .build();
+                websocketService.despacharAlertaGlobal(alertaDespacho);
+
+                return mapToDTO(guardado);
+        }
+
         // Gestión Operativa: Derivar denuncia a Carabineros o Municipalidad
         public IncidenteResponseDTO derivarIncidente(String id, DerivacionRequestDTO dto) {
                 Incidente incidente = incidenteRepository.findById(id)
@@ -323,7 +485,7 @@ public class IncidenteService {
                 dto.setDireccionTexto(incidente.getDireccionTexto());
                 dto.setSector(sectorService.resolverSector(dto.getLongitud(), dto.getLatitud()));
 
-                // Gestión Operativa (Derivación)
+                // Gestión Operativa (Derivación y Despacho)
                 dto.setDerivado(incidente.isDerivado());
                 dto.setDerivacionEntidad(incidente.getDerivacionEntidad());
                 dto.setDerivacionDetalle(incidente.getDerivacionDetalle());
@@ -332,6 +494,11 @@ public class IncidenteService {
                 dto.setDerivacionObservacion(incidente.getDerivacionObservacion());
                 dto.setFechaDerivacion(incidente.getFechaDerivacion());
                 dto.setDerivadoPor(incidente.getDerivadoPor());
+                dto.setDestacamentoReceptor(incidente.getDestacamentoReceptor());
+                dto.setViaComunicacion(incidente.getViaComunicacion());
+                dto.setFolioDerivacion(incidente.getFolioDerivacion());
+                dto.setComprobantePdfId(incidente.getComprobantePdfId());
+                dto.setTipoPatrullaje(incidente.getTipoPatrullaje());
 
                 // Evidencias Multimedia
                 dto.setEvidencias(incidente.getEvidencias() != null ? incidente.getEvidencias()

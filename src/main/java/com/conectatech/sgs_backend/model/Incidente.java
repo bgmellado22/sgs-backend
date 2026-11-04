@@ -76,6 +76,21 @@ public class Incidente {
     @Field("derivado_por")
     private String derivadoPor;
 
+    @Field("destacamento_receptor")
+    private String destacamentoReceptor;
+
+    @Field("via_comunicacion")
+    private String viaComunicacion;
+
+    @Field("folio_derivacion")
+    private String folioDerivacion;
+
+    @Field("comprobante_pdf_id")
+    private String comprobantePdfId;
+
+    @Field("tipo_patrullaje")
+    private String tipoPatrullaje;
+
     @Field("evidencias")
     private List<Evidencia> evidencias;
 

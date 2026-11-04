@@ -25,7 +25,7 @@ public class IncidenteResponseDTO {
     private String direccionTexto;
     private String sector; // Localidad más cercana (calculada, no persistida)
 
-    // Gestión Operativa (Derivación)
+    // Gestión Operativa (Derivación y Despacho)
     private boolean derivado;
     private String derivacionEntidad;
     private String derivacionDetalle;
@@ -34,6 +34,11 @@ public class IncidenteResponseDTO {
     private String derivacionObservacion;
     private LocalDateTime fechaDerivacion;
     private String derivadoPor;
+    private String destacamentoReceptor;
+    private String viaComunicacion;
+    private String folioDerivacion;
+    private String comprobantePdfId;
+    private String tipoPatrullaje;
 
     // Evidencias Multimedia
     private List<Evidencia> evidencias;

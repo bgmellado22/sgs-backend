@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.conectatech.sgs_backend.dto.DerivacionRequestDTO;
+import com.conectatech.sgs_backend.dto.DerivacionPolicialDTO;
+import com.conectatech.sgs_backend.dto.DespachoMunicipalDTO;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
@@ -69,7 +72,48 @@ public class IncidenteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
-    // Gestión Operativa: Derivación a Carabineros o Municipalidad
+    // Gestión Operativa: Derivación Interinstitucional a Carabineros de Chile (Multipart)
+    @PostMapping(value = "/{id}/derivar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<IncidenteResponseDTO> derivarACarabineros(
+            @PathVariable("id") String id,
+            @RequestPart("datos") @Valid DerivacionPolicialDTO dto,
+            @RequestPart(value = "comprobantePdf", required = false) MultipartFile comprobantePdf) {
+
+        if (comprobantePdf != null && !comprobantePdf.isEmpty()) {
+            if (comprobantePdf.getSize() > 10 * 1024 * 1024) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo PDF no debe exceder 10 MB.");
+            }
+            String contentType = comprobantePdf.getContentType();
+            if (contentType == null || !contentType.equalsIgnoreCase("application/pdf")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se admiten documentos en formato application/pdf.");
+            }
+        }
+
+        IncidenteResponseDTO actualizado = incidenteService.derivarACarabineros(id, dto, comprobantePdf);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    // Gestión Operativa: Despacho Interno Municipal (Seguridad Ciudadana / OS-14)
+    @PostMapping("/{id}/despachar")
+    public ResponseEntity<IncidenteResponseDTO> despacharMunicipal(
+            @PathVariable("id") String id,
+            @Valid @RequestBody DespachoMunicipalDTO dto) {
+
+        IncidenteResponseDTO actualizado = incidenteService.despacharMunicipal(id, dto);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    // Descarga y visualización inline de comprobante PDF de derivación policial
+    @GetMapping("/{id}/comprobante")
+    public ResponseEntity<Resource> obtenerComprobantePdf(@PathVariable("id") String id) {
+        GridFsResource recurso = incidenteService.obtenerComprobanteDerivacion(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"comprobante-derivacion-" + id + ".pdf\"")
+                .body(recurso);
+    }
+
+    // Compatibilidad legada: PATCH derivar
     @PatchMapping("/{id}/derivar")
     public ResponseEntity<IncidenteResponseDTO> derivarIncidente(
             @PathVariable("id") String id,
