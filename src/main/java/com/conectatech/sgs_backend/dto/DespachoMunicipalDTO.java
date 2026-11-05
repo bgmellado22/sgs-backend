@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DespachoMunicipalDTO {
+    private Long version;
     private String inspectorId;
     private String inspectorNombre;
 

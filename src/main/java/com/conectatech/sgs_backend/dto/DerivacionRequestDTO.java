@@ -5,6 +5,8 @@ import lombok.Data;
 
 @Data
 public class DerivacionRequestDTO {
+    private Long version;
+
     @NotBlank(message = "La entidad de derivación es obligatoria (CARABINEROS o MUNICIPALIDAD)")
     private String entidad;
 

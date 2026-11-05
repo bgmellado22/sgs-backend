@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 public class IncidenteResponseDTO {
     private String id;
+    private Long version;
     private String codigoCorrelativo;
     private String categoria;
     private String tipo;

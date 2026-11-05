@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
@@ -21,6 +22,9 @@ public class Incidente {
 
     @Id
     private String id;
+
+    @Version
+    private Long version;
 
     @Field("codigo_correlativo")
     private String codigoCorrelativo;

@@ -258,6 +258,11 @@ public class IncidenteService {
                 Incidente incidente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
 
+                validarSincronizacionVersion(incidente, dto.getVersion());
+                if (dto.getVersion() != null) {
+                        incidente.setVersion(dto.getVersion());
+                }
+
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
 
@@ -337,6 +342,11 @@ public class IncidenteService {
                 Incidente incidente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
 
+                validarSincronizacionVersion(incidente, dto.getVersion());
+                if (dto.getVersion() != null) {
+                        incidente.setVersion(dto.getVersion());
+                }
+
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
 
@@ -394,6 +404,11 @@ public class IncidenteService {
         public IncidenteResponseDTO derivarIncidente(String id, DerivacionRequestDTO dto) {
                 Incidente incidente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
+
+                validarSincronizacionVersion(incidente, dto.getVersion());
+                if (dto.getVersion() != null) {
+                        incidente.setVersion(dto.getVersion());
+                }
 
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
@@ -461,10 +476,18 @@ public class IncidenteService {
                                 .collect(Collectors.toList());
         }
 
+        // Obtener un único incidente por ID
+        public IncidenteResponseDTO obtenerPorId(String id) {
+                Incidente incidente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
+                return mapToDTO(incidente);
+        }
+
         // Traducir Entidad a DTO
         private IncidenteResponseDTO mapToDTO(Incidente incidente) {
                 IncidenteResponseDTO dto = new IncidenteResponseDTO();
                 dto.setId(incidente.getId());
+                dto.setVersion(incidente.getVersion());
                 dto.setCodigoCorrelativo(incidente.getCodigoCorrelativo());
                 dto.setCategoria(incidente.getCategoria());
                 dto.setTipo(incidente.getTipo());
@@ -519,15 +542,35 @@ public class IncidenteService {
                 auditoriaService.registrarAuditoria(incidenteId, codigoCorrelativo, actor, campo, valorAnt, valorNue, comentario);
         }
 
+        // Validación de bloqueo optimista para prevenir sobreescrituras concurrentes
+        private void validarSincronizacionVersion(Incidente incidente, Long versionCliente) {
+                if (versionCliente != null && incidente.getVersion() != null) {
+                        if (!Objects.equals(incidente.getVersion(), versionCliente)) {
+                                throw new org.springframework.dao.OptimisticLockingFailureException(
+                                                String.format("Conflicto de gestión concurrente en denuncia %s: la versión actual en la base de datos es %d pero la acción se basó en la versión desfasada %d.",
+                                                                incidente.getCodigoCorrelativo(), incidente.getVersion(), versionCliente));
+                        }
+                }
+        }
+
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado) {
-                return actualizarEstado(id, nuevoEstado, null);
+                return actualizarEstado(id, nuevoEstado, null, null);
+        }
+
+        public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo) {
+                return actualizarEstado(id, nuevoEstado, motivo, null);
         }
 
         // Método para actualizar el estado de un incidente con auditoría y motivo explicativo
-        public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo) {
+        public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo, Long version) {
                 Incidente incidenteExistente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
+
+                validarSincronizacionVersion(incidenteExistente, version);
+                if (version != null) {
+                        incidenteExistente.setVersion(version);
+                }
 
                 String estadoAnterior = incidenteExistente.getEstado();
 
@@ -583,6 +626,11 @@ public class IncidenteService {
                 Incidente incidente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
+
+                validarSincronizacionVersion(incidente, dto.getVersion());
+                if (dto.getVersion() != null) {
+                        incidente.setVersion(dto.getVersion());
+                }
 
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();

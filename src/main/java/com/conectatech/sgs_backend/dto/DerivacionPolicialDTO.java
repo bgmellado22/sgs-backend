@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DerivacionPolicialDTO {
 
+    private Long version;
+
     @NotBlank(message = "La unidad receptora de Carabineros es obligatoria.")
     private String destacamentoReceptor;
 

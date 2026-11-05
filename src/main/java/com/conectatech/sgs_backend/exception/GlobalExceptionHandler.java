@@ -56,6 +56,16 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, ex.getStatusCode());
     }
 
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, String>> handleOptimisticLockingFailureException(
+            org.springframework.dao.OptimisticLockingFailureException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("codigo", "OPTIMISTIC_LOCK_CONFLICT");
+        error.put("error", "Conflicto de edición concurrente");
+        error.put("message", "El registro fue modificado por otro usuario mientras se gestionaba. Por favor, recargue la información para ver los cambios más recientes.");
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler({
         org.springframework.web.multipart.support.MissingServletRequestPartException.class,
         org.springframework.http.converter.HttpMessageNotReadableException.class,

@@ -184,6 +184,15 @@ public class ConfiguracionService {
                     + " son inmutables por defecto y no pueden modificarse.");
         }
 
+        // Validación de bloqueo optimista
+        if (catalogoActualizado.getVersion() != null && existente.getVersion() != null) {
+            if (!Objects.equals(existente.getVersion(), catalogoActualizado.getVersion())) {
+                throw new org.springframework.dao.OptimisticLockingFailureException(
+                        "Conflicto de edición concurrente: Esta opción de catálogo fue modificada por otro administrador.");
+            }
+            existente.setVersion(catalogoActualizado.getVersion());
+        }
+
         String etiquetaAnterior = existente.getEtiqueta();
         String visualAnterior = describirVisual(existente);
         boolean estadoAnterior = existente.isActivo();

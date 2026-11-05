@@ -9,6 +9,8 @@ import lombok.Data;
 
 @Data
 public class IncidenteRequestDTO {
+    private Long version;
+
     @NotBlank(message = "La categoría no puede estar vacía")
     private String categoria;
 

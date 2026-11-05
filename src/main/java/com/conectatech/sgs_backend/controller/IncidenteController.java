@@ -45,6 +45,12 @@ public class IncidenteController {
         return ResponseEntity.ok(incidenteService.obtenerTodos());
     }
 
+    // Obtener un incidente por ID
+    @GetMapping("/{id}")
+    public ResponseEntity<IncidenteResponseDTO> obtenerPorId(@PathVariable("id") String id) {
+        return ResponseEntity.ok(incidenteService.obtenerPorId(id));
+    }
+
     // Paginación del Servidor con Filtros Avanzados
     @GetMapping("/paginado")
     public ResponseEntity<Page<IncidenteResponseDTO>> obtenerIncidentesPaginado(
@@ -152,15 +158,22 @@ public class IncidenteController {
         }
     }
 
-    // Actualización Rápida de Estado
+    // Actualización Rápida de Estado con Bloqueo Optimista
     @PatchMapping("/{id}/estado")
     public ResponseEntity<IncidenteResponseDTO> actualizarEstado(
             @PathVariable("id") String id,
-            @RequestBody Map<String, String> request) {
+            @RequestBody Map<String, Object> request) {
 
-        String nuevoEstado = request.get("estado");
-        String motivo = request.get("motivo");
-        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, nuevoEstado, motivo);
+        String nuevoEstado = request.get("estado") != null ? String.valueOf(request.get("estado")) : null;
+        String motivo = request.get("motivo") != null ? String.valueOf(request.get("motivo")) : null;
+        Long version = null;
+        if (request.containsKey("version") && request.get("version") != null) {
+            try {
+                version = Long.valueOf(String.valueOf(request.get("version")));
+            } catch (NumberFormatException ignored) {}
+        }
+
+        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, nuevoEstado, motivo, version);
         return ResponseEntity.ok(actualizado);
     }
 
