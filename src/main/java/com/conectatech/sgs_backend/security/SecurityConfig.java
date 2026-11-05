@@ -90,6 +90,9 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.PUT, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                // Reactivación de denuncias inactivas (Acceso EXCLUSIVO para Administradores)
+                                                .requestMatchers(HttpMethod.PATCH, "/api/v1/incidentes/*/reactivar")
+                                                .hasRole("ADMINISTRADOR")
                                                 .requestMatchers(HttpMethod.PATCH, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")

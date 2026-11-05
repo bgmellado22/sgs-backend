@@ -531,6 +531,7 @@ public class IncidenteService {
                 dto.setDenunciante(com.conectatech.sgs_backend.util.PiiMaskingUtils.buildSanitizedDenunciante(
                                 incidente.getDenunciante(), incidente.isEsAnonimo()));
                 dto.setEsAnonimo(incidente.isEsAnonimo());
+                dto.setActivo(incidente.isActivo());
 
                 return dto;
         }
@@ -780,7 +781,82 @@ public class IncidenteService {
                                                 + actor.getNombreCompleto());
         }
 
+        // Método para reactivar un incidente inactivo (exclusivo Administrador)
+        public IncidenteResponseDTO reactivarIncidente(String id, String motivo) {
+                Incidente incidenteExistente = incidenteRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Incidente no encontrado con ID: " + id));
+
+                if (incidenteExistente.isActivo()) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.BAD_REQUEST, "La denuncia ya se encuentra activa.");
+                }
+
+                incidenteExistente.setActivo(true);
+                Incidente guardado = incidenteRepository.save(incidenteExistente);
+
+                // Registro forense en bitácora
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                Usuario actor = (Usuario) auth.getPrincipal();
+
+                String detalleAuditoria = (motivo != null && !motivo.isBlank())
+                                ? motivo.trim()
+                                : "Denuncia reactivada por supervisión administrativa";
+
+                registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
+                                "Reactivación",
+                                "Inactivo", "Activo",
+                                "Denuncia reactivada por " + actor.getNombreCompleto() + ": " + detalleAuditoria);
+
+                // Notificación global vía WebSocket
+                Notificacion alertaReactivacion = Notificacion.builder()
+                                .titulo("Denuncia Reactivada")
+                                .mensaje("El administrador " + actor.getNombreCompleto() + " reactivó la denuncia "
+                                                + guardado.getCodigoCorrelativo())
+                                .tipo(TipoNotificacion.INFORMATIVO)
+                                .referenciaId(guardado.getId())
+                                .usuarioDestinoId("GLOBAL")
+                                .build();
+                websocketService.despacharAlertaGlobal(alertaReactivacion);
+
+                return mapToDTO(guardado);
+        }
+
         // Método para buscar incidentes con filtros avanzados
+        public List<IncidenteResponseDTO> buscarIncidentesAvanzado(
+                        String textoBusqueda,
+                        String categoria,
+                        String tipo,
+                        String estado,
+                        String prioridad,
+                        Boolean soloInactivos,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin) {
+
+                boolean buscarInactivos = false;
+                if (Boolean.TRUE.equals(soloInactivos)) {
+                        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                        if (auth != null && auth.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))) {
+                                buscarInactivos = true;
+                        }
+                }
+
+                List<Incidente> resultados = incidenteRepository.buscarConFiltrosAvanzados(
+                                textoBusqueda,
+                                categoria,
+                                tipo,
+                                estado,
+                                prioridad,
+                                buscarInactivos,
+                                fechaInicio,
+                                fechaFin);
+
+                return resultados.stream()
+                                .map(this::mapToDTO)
+                                .collect(java.util.stream.Collectors.toList());
+        }
+
         public List<IncidenteResponseDTO> buscarIncidentesAvanzado(
                         String textoBusqueda,
                         String categoria,
@@ -789,19 +865,7 @@ public class IncidenteService {
                         String prioridad,
                         LocalDateTime fechaInicio,
                         LocalDateTime fechaFin) {
-
-                List<Incidente> resultados = incidenteRepository.buscarConFiltrosAvanzados(
-                                textoBusqueda,
-                                categoria,
-                                tipo,
-                                estado,
-                                prioridad,
-                                fechaInicio,
-                                fechaFin);
-
-                return resultados.stream()
-                                .map(this::mapToDTO)
-                                .collect(java.util.stream.Collectors.toList());
+                return buscarIncidentesAvanzado(textoBusqueda, categoria, tipo, estado, prioridad, false, fechaInicio, fechaFin);
         }
 
         // Método para buscar incidentes paginados con filtros avanzados
@@ -811,9 +875,19 @@ public class IncidenteService {
                         String tipo,
                         String estado,
                         String prioridad,
+                        Boolean soloInactivos,
                         LocalDateTime fechaInicio,
                         LocalDateTime fechaFin,
                         Pageable pageable) {
+
+                boolean buscarInactivos = false;
+                if (Boolean.TRUE.equals(soloInactivos)) {
+                        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                        if (auth != null && auth.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))) {
+                                buscarInactivos = true;
+                        }
+                }
 
                 Page<Incidente> resultados = incidenteRepository.buscarConFiltrosAvanzadosPaginado(
                                 textoBusqueda,
@@ -821,11 +895,24 @@ public class IncidenteService {
                                 tipo,
                                 estado,
                                 prioridad,
+                                buscarInactivos,
                                 fechaInicio,
                                 fechaFin,
                                 pageable);
 
                 return resultados.map(this::mapToDTO);
+        }
+
+        public Page<IncidenteResponseDTO> buscarIncidentesAvanzadoPaginado(
+                        String textoBusqueda,
+                        String categoria,
+                        String tipo,
+                        String estado,
+                        String prioridad,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin,
+                        Pageable pageable) {
+                return buscarIncidentesAvanzadoPaginado(textoBusqueda, categoria, tipo, estado, prioridad, false, fechaInicio, fechaFin, pageable);
         }
 
         private void asignarVencimientoTiempoRespuesta(Incidente incidente) {

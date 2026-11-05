@@ -47,4 +47,7 @@ public class IncidenteResponseDTO {
     // Datos del Denunciante
     private DenuncianteDTO denunciante;
     private boolean esAnonimo;
+
+    // Estado lógico
+    private boolean activo;
 }

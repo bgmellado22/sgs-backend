@@ -60,12 +60,13 @@ public class IncidenteController {
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String prioridad,
+            @RequestParam(required = false) Boolean soloInactivos,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
             @PageableDefault(size = 10, sort = "fecha_creacion", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<IncidenteResponseDTO> pagina = incidenteService.buscarIncidentesAvanzadoPaginado(
-                textoBusqueda, categoria, tipo, estado, prioridad, fechaInicio, fechaFin, pageable);
+                textoBusqueda, categoria, tipo, estado, prioridad, soloInactivos, fechaInicio, fechaFin, pageable);
         return ResponseEntity.ok(pagina);
     }
 
@@ -195,6 +196,21 @@ public class IncidenteController {
         return ResponseEntity.noContent().build();
     }
 
+    // Reactivación de denuncia inactiva (Acceso EXCLUSIVO para Administradores)
+    @PatchMapping("/{id}/reactivar")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<IncidenteResponseDTO> reactivarIncidente(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, String> request) {
+
+        String motivo = (request != null && request.containsKey("motivo"))
+                ? request.get("motivo")
+                : null;
+
+        IncidenteResponseDTO reactivado = incidenteService.reactivarIncidente(id, motivo);
+        return ResponseEntity.ok(reactivado);
+    }
+
     // Historial de UN solo incidente
     @GetMapping("/{id}/bitacora")
     public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacora(
@@ -226,10 +242,11 @@ public class IncidenteController {
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String prioridad,
+            @RequestParam(required = false) Boolean soloInactivos,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
         List<IncidenteResponseDTO> resultados = incidenteService.buscarIncidentesAvanzado(
-                textoBusqueda, categoria, tipo, estado, prioridad, fechaInicio, fechaFin);
+                textoBusqueda, categoria, tipo, estado, prioridad, soloInactivos, fechaInicio, fechaFin);
         return ResponseEntity.ok(resultados);
     }
 }

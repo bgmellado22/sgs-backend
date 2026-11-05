@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -188,7 +189,7 @@ public class IncidenteControllerTest {
         dto.setCodigoCorrelativo("INC-999");
         dto.setDescripcion("Prueba con teléfono +569 1234 (urgente)");
 
-        when(incidenteService.buscarIncidentesAvanzadoPaginado(any(), any(), any(), any(), any(), any(), any(), any()))
+        when(incidenteService.buscarIncidentesAvanzadoPaginado(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1));
 
         mockMvc.perform(get("/api/v1/incidentes/paginado")
@@ -212,5 +213,38 @@ public class IncidenteControllerTest {
                 .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Incidente no encontrado con ID: no-existe"));
+    }
+
+    // Tests PATCH /api/v1/incidentes/{id}/reactivar
+
+    @Test
+    @DisplayName("PATCH /incidentes/{id}/reactivar con rol ADMINISTRADOR → 200 OK")
+    public void testReactivarIncidente_ConRolAdmin_Retorna200() throws Exception {
+        IncidenteResponseDTO dto = new IncidenteResponseDTO();
+        dto.setId("inc123");
+        dto.setCodigoCorrelativo("INC-100");
+        dto.setActivo(true);
+
+        when(incidenteService.reactivarIncidente(any(), any())).thenReturn(dto);
+
+        mockMvc.perform(patch("/api/v1/incidentes/inc123/reactivar")
+                .with(user("admin").roles("ADMINISTRADOR"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"motivo\":\"Error de digitación\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("inc123"))
+                .andExpect(jsonPath("$.activo").value(true));
+    }
+
+    @Test
+    @DisplayName("PATCH /incidentes/{id}/reactivar con rol OPERADOR → 403 Forbidden")
+    public void testReactivarIncidente_ConRolOperador_Retorna403() throws Exception {
+        mockMvc.perform(patch("/api/v1/incidentes/inc123/reactivar")
+                .with(user("operador").roles("OPERADOR"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"motivo\":\"Intento no autorizado\"}"))
+                .andExpect(status().isForbidden());
     }
 }
