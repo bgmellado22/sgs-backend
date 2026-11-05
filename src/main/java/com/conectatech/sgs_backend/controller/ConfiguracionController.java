@@ -17,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/configuracion")
 @CrossOrigin(origins = { "http://localhost:5173", "https://sgs-el-tabo-frontend.vercel.app" })
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMINISTRADOR')")
 public class ConfiguracionController {
 
     private final ConfiguracionService configuracionService;
@@ -28,8 +29,10 @@ public class ConfiguracionController {
     /**
      * GET /api/v1/configuracion/parametros
      * Retorna todos los parámetros del sistema (Tiempos de Respuesta, etc.)
+     * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @GetMapping("/parametros")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<ParametroSistema>> obtenerParametros() {
         return ResponseEntity.ok(configuracionService.obtenerParametros());
     }
@@ -37,10 +40,10 @@ public class ConfiguracionController {
     /**
      * PUT /api/v1/configuracion/parametros
      * Actualiza masivamente los parámetros del sistema.
-     * Seguridad: ADMINISTRADOR y OPERADOR.
+     * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @PutMapping("/parametros")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<ParametroSistema>> actualizarParametros(
             @RequestBody Map<String, String> parametros) {
         return ResponseEntity.ok(configuracionService.actualizarParametros(parametros));
@@ -49,10 +52,10 @@ public class ConfiguracionController {
     /**
      * DELETE /api/v1/configuracion/parametros/{id}
      * Elimina un parámetro del sistema.
-     * Seguridad: ADMINISTRADOR y OPERADOR.
+     * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @DeleteMapping("/parametros/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarParametro(@PathVariable String id) {
         configuracionService.eliminarParametro(id);
         return ResponseEntity.noContent().build();
@@ -65,10 +68,10 @@ public class ConfiguracionController {
     /**
      * GET /api/v1/configuracion/catalogos/{tipo}
      * Retorna todos los catálogos (activos e inactivos) del tipo indicado.
-     * Seguridad: ADMINISTRADOR y OPERADOR.
+     * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @GetMapping("/catalogos/{tipo}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<Catalogo>> obtenerCatalogosAdmin(@PathVariable String tipo) {
         return ResponseEntity.ok(configuracionService.obtenerCatalogosAdmin(tipo));
     }
@@ -77,11 +80,11 @@ public class ConfiguracionController {
      * POST /api/v1/configuracion/catalogos/{tipo}
      * Crea un nuevo valor de catálogo del tipo indicado.
      * Tipos permitidos: origen, prioridad, categoria
-     * Seguridad: ADMINISTRADOR y OPERADOR.
+     * Seguridad: Exclusivo ADMINISTRADOR.
      * Auditoría: Registro forense automático en bitácora.
      */
     @PostMapping("/catalogos/{tipo}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Catalogo> crearCatalogo(
             @PathVariable String tipo,
             @Valid @RequestBody Catalogo catalogo) {
@@ -92,10 +95,10 @@ public class ConfiguracionController {
     /**
      * PUT /api/v1/configuracion/catalogos/{id}
      * Edita un valor de catálogo existente.
-     * Seguridad: ADMINISTRADOR y OPERADOR.
+     * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @PutMapping("/catalogos/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Catalogo> editarCatalogo(
             @PathVariable String id,
             @Valid @RequestBody Catalogo catalogo) {
@@ -105,10 +108,10 @@ public class ConfiguracionController {
     /**
      * DELETE /api/v1/configuracion/catalogos/{id}
      * Elimina un valor de catálogo.
-     * Seguridad: ADMINISTRADOR y OPERADOR.
+     * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @DeleteMapping("/catalogos/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarCatalogo(@PathVariable String id) {
         configuracionService.eliminarCatalogo(id);
         return ResponseEntity.noContent().build();

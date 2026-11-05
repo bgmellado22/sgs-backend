@@ -73,15 +73,9 @@ public class SecurityConfig {
                                                 // Módulo de Reportes
                                                 .requestMatchers("/api/v1/reportes/**").hasRole("ADMINISTRADOR")
 
-                                                // Módulo de Configuración del Sistema
-                                                .requestMatchers(HttpMethod.GET, "/api/v1/configuracion/**")
-                                                .authenticated()
-                                                .requestMatchers(HttpMethod.PUT, "/api/v1/configuracion/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                                                .requestMatchers(HttpMethod.POST, "/api/v1/configuracion/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/configuracion/**")
-                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                // Módulo de Configuración del Sistema (Acceso EXCLUSIVO para Administradores)
+                                                .requestMatchers("/api/v1/configuracion/**")
+                                                .hasRole("ADMINISTRADOR")
 
                                                 // Módulo de Incidentes - Evidencias Multimedia (GridFS protegida)
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/incidentes/evidencias/**")
@@ -102,6 +96,9 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                // Bitácora Global de Auditoría (Acceso EXCLUSIVO para Administradores)
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/incidentes/bitacora/global")
+                                                .hasRole("ADMINISTRADOR")
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR", "CIUDADANO")

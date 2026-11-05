@@ -30,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/incidentes")
@@ -201,8 +202,9 @@ public class IncidenteController {
         return ResponseEntity.ok(incidenteService.obtenerHistorial(id));
     }
 
-    // Historial Global Paginado con Filtros
+    // Historial Global Paginado con Filtros (Acceso EXCLUSIVO para Administradores)
     @GetMapping("/bitacora/global")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Page<BitacoraProcedimiento>> obtenerBitacoraGlobal(
             @RequestParam(required = false) String textoBusqueda,
             @RequestParam(required = false) String modulo,
