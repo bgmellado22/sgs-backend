@@ -131,11 +131,45 @@ public class AuthService {
                         usuarioRepository.save(user);
                 }
 
+                // Registro forense en bitácora de inicio de sesión exitoso
+                try {
+                        auditoriaService.registrarAuditoriaManual(
+                                        user.getId(),
+                                        user.getNombreCompleto(),
+                                        user.getRol().name(),
+                                        "USUARIO_LOGIN",
+                                        "Inactiva",
+                                        "Sesión Iniciada",
+                                        "Inicio de sesión exitoso mediante correo electrónico (" + user.getEmail() + ")"
+                        );
+                } catch (Exception e) {
+                        // Resiliente: no interrumpir el flujo de autenticación ante contingencias de bitácora
+                }
+
                 var jwtToken = jwtUtil.generateToken(user);
                 return AuthResponse.builder()
                                 .token(jwtToken)
                                 .rol(user.getRol().name())
                                 .build();
+        }
+
+        public void logout() {
+                try {
+                        Usuario actor = auditoriaService.getUsuarioActual();
+                        if (actor != null) {
+                                auditoriaService.registrarAuditoriaManual(
+                                                actor.getId(),
+                                                actor.getNombreCompleto(),
+                                                actor.getRol() != null ? actor.getRol().name() : "SISTEMA",
+                                                "USUARIO_LOGOUT",
+                                                "Sesión Activa",
+                                                "Sesión Finalizada",
+                                                "Cierre de sesión del usuario " + actor.getNombreCompleto()
+                                );
+                        }
+                } catch (Exception e) {
+                        // Resiliente: no interrumpir el flujo ante contingencias de bitácora
+                }
         }
 
         private void verificarBloqueo(Usuario usuario) {

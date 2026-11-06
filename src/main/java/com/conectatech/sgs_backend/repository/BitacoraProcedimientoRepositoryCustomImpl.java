@@ -60,7 +60,7 @@ public class BitacoraProcedimientoRepositoryCustomImpl implements BitacoraProced
                     criterios.add(Criteria.where("campoModificado").regex("CATALOGO|CATÁLOGO", "i"));
                     break;
                 case "USUARIOS":
-                    criterios.add(Criteria.where("campoModificado").regex("USUARIO|REGISTRO", "i"));
+                    criterios.add(Criteria.where("campoModificado").regex("USUARIO|REGISTRO|LOGIN|LOGOUT|SESION|SESIÓN|AUTENTICACION|AUTENTICACIÓN", "i"));
                     break;
                 case "INCIDENTES":
                     Criteria incidenteCriteria = new Criteria().orOperator(
@@ -89,7 +89,13 @@ public class BitacoraProcedimientoRepositoryCustomImpl implements BitacoraProced
                     criterios.add(Criteria.where("campoModificado").regex("ELIMINACION|ELIMINACIÓN|DESACTIVACION|DESACTIVACIÓN", "i"));
                     break;
                 case "MODIFICACION":
-                    criterios.add(Criteria.where("campoModificado").not().regex("CREACION|CREACIÓN|REGISTRO|ELIMINACION|ELIMINACIÓN|DESACTIVACION|DESACTIVACIÓN", "i"));
+                    criterios.add(Criteria.where("campoModificado").not().regex("CREACION|CREACIÓN|REGISTRO|ELIMINACION|ELIMINACIÓN|DESACTIVACION|DESACTIVACIÓN|LOGIN|LOGOUT|SESION|SESIÓN|AUTENTICACION|AUTENTICACIÓN", "i"));
+                    break;
+                case "SESION":
+                case "AUTENTICACION":
+                case "LOGIN_LOGOUT":
+                case "LOGIN":
+                    criterios.add(Criteria.where("campoModificado").regex("LOGIN|LOGOUT|SESION|SESIÓN|AUTENTICACION|AUTENTICACIÓN", "i"));
                     break;
                 default:
                     break;
