@@ -5,6 +5,7 @@ import com.conectatech.sgs_backend.model.Denunciante;
 import com.conectatech.sgs_backend.model.Incidente;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
 import com.conectatech.sgs_backend.util.PiiMaskingUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +19,18 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -30,28 +41,58 @@ public class EmailService {
     private final IncidenteRepository incidenteRepository;
     private final AuditoriaService auditoriaService;
     private final ResourceLoader resourceLoader;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${spring.mail.username:sgs.eltabo.soporte@gmail.com}")
     private String remitente;
 
+    @Value("${brevo.api.key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
+
     private static final DateTimeFormatter FORMATO_FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public void sendPasswordResetEmail(String to, String token) {
+        String resetUrl = "http://localhost:5173/recuperar-clave?token=" + token;
+        String asunto = "SGS El Tabo - Recuperación de Contraseña";
+        String contenidoTexto = "Hola,\n\nHas solicitado restablecer tu contraseña para el Sistema de Gestión de Seguridad (SGS).\n\n" +
+                "Haz clic en el siguiente enlace para crear una nueva contraseña:\n" +
+                resetUrl + "\n\n" +
+                "Este enlace expirará en 15 minutos por motivos de seguridad.\n" +
+                "Si no solicitaste esto, puedes ignorar este correo.";
+
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            try {
+                Map<String, Object> payload = Map.of(
+                        "sender", Map.of("name", "SGSP El Tabo", "email", remitente),
+                        "to", List.of(Map.of("email", to)),
+                        "subject", asunto,
+                        "textContent", contenidoTexto
+                );
+                String jsonBody = objectMapper.writeValueAsString(payload);
+                HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                        .header("Accept", "application/json")
+                        .header("Content-Type", "application/json")
+                        .header("api-key", brevoApiKey.trim())
+                        .timeout(Duration.ofSeconds(15))
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
+                        .build();
+                client.send(request, HttpResponse.BodyHandlers.ofString());
+                log.info("Correo de restablecimiento enviado vía Brevo API hacia {}", PiiMaskingUtils.maskEmail(to));
+                return;
+            } catch (Exception e) {
+                log.warn("Fallo al enviar correo de restablecimiento vía Brevo, reintentando vía SMTP: {}", e.getMessage());
+            }
+        }
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(remitente);
         message.setTo(to);
-        message.setSubject("SGS El Tabo - Recuperación de Contraseña");
-
-        String resetUrl = "http://localhost:5173/recuperar-clave?token=" + token;
-
-        message.setText(
-                "Hola,\n\nHas solicitado restablecer tu contraseña para el Sistema de Gestión de Seguridad (SGS).\n\n" +
-                        "Haz clic en el siguiente enlace para crear una nueva contraseña:\n" +
-                        resetUrl + "\n\n" +
-                        "Este enlace expirará en 15 minutos por motivos de seguridad.\n" +
-                        "Si no solicitaste esto, puedes ignorar este correo.");
-
+        message.setSubject(asunto);
+        message.setText(contenidoTexto);
         mailSender.send(message);
+        log.info("Correo de restablecimiento enviado vía SMTP hacia {}", PiiMaskingUtils.maskEmail(to));
     }
 
     /**
@@ -69,6 +110,9 @@ public class EmailService {
 
     /**
      * Construye y envía el correo institucional con el reporte cerrado al vecino denunciante.
+     * Soporta despacho híbrido:
+     * - Si está configurada BREVO_API_KEY: Despacha vía HTTP REST (puerto 443, ideal para Render / Cloud sin bloqueos).
+     * - Si no está configurada: Despacha vía SMTP tradicional (puerto 587, ideal para despliegues on-premise en El Tabo).
      */
     public void enviarCorreoResolucionCierre(Incidente incidente, String resolucionMunicipal) {
         String folio = incidente.getCodigoCorrelativo() != null
@@ -101,43 +145,31 @@ public class EmailService {
 
         String asunto = "SGSP El Tabo Actualización de su reporte N° " + folio;
 
+        Resource logoResource = buscarRecursoLogo();
+        boolean tieneLogo = logoResource != null && logoResource.exists();
+
+        String contenidoHtml = construirHtmlCierre(
+                nombreVecino,
+                folio,
+                tipoIncidente,
+                fechaIngresoStr,
+                resolucionTexto,
+                tieneLogo
+        );
+
+        boolean usarBrevo = brevoApiKey != null && !brevoApiKey.isBlank();
+
         try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-            helper.setFrom(remitente);
-            helper.setTo(destinatario);
-            helper.setSubject(asunto);
-
-            // Búsqueda del recurso del logotipo institucional (SVG o PNG en assets)
-            Resource logoResource = buscarRecursoLogo();
-            boolean tieneLogo = logoResource != null && logoResource.exists();
-
-            String contenidoHtml = construirHtmlCierre(
-                    nombreVecino,
-                    folio,
-                    tipoIncidente,
-                    fechaIngresoStr,
-                    resolucionTexto,
-                    tieneLogo
-            );
-
-            helper.setText(contenidoHtml, true);
-
-            // Si el logo está presente en el classpath, se asocia como inline CID
-            if (tieneLogo) {
-                try {
-                    String filename = logoResource.getFilename() != null ? logoResource.getFilename().toLowerCase() : "";
-                    String mimeType = filename.endsWith(".svg") ? "image/svg+xml" : "image/png";
-                    helper.addInline("logoEscudo", logoResource, mimeType);
-                } catch (Exception exLogo) {
-                    log.warn("No se pudo incrustar el recurso de logo como inline CID, continuando envío: {}", exLogo.getMessage());
-                }
+            if (usarBrevo) {
+                log.info("Despachando correo institucional vía Brevo REST API (HTTPS puerto 443) hacia {} para el incidente {}...",
+                        PiiMaskingUtils.maskEmail(destinatario), folio);
+                enviarViaBrevo(destinatario, nombreVecino, asunto, contenidoHtml, logoResource, tieneLogo);
+            } else {
+                log.info("Despachando correo institucional vía SMTP estándar (puerto 587) hacia {} para el incidente {}...",
+                        PiiMaskingUtils.maskEmail(destinatario), folio);
+                enviarViaSmtp(destinatario, asunto, contenidoHtml, logoResource, tieneLogo);
             }
 
-            log.info("Despachando correo SMTP institucional hacia {} para el incidente {}...",
-                    PiiMaskingUtils.maskEmail(destinatario), folio);
-            mailSender.send(mimeMessage);
             log.info("Correo de notificación de cierre enviado exitosamente a {} para el incidente {}",
                     PiiMaskingUtils.maskEmail(destinatario), folio);
 
@@ -147,6 +179,7 @@ public class EmailService {
             incidenteRepository.save(incidente);
 
             // Registrar en auditoría forense
+            String canal = usarBrevo ? "API Brevo (HTTPS)" : "SMTP Gmail (587)";
             auditoriaService.registrarAuditoria(
                     incidente.getId(),
                     folio,
@@ -154,7 +187,7 @@ public class EmailService {
                     "Notificación por Correo",
                     "Pendiente",
                     "Enviado",
-                    "Notificación de cierre remitida con éxito al correo " + PiiMaskingUtils.maskEmail(destinatario)
+                    "Notificación de cierre remitida con éxito a " + PiiMaskingUtils.maskEmail(destinatario) + " [" + canal + "]"
             );
 
         } catch (Exception e) {
@@ -170,6 +203,83 @@ public class EmailService {
                     "Fallo al enviar correo a " + PiiMaskingUtils.maskEmail(destinatario) + ": " + e.getMessage()
             );
         }
+    }
+
+    /**
+     * Envío transaccional vía Brevo REST API (HTTPS puerto 443).
+     * Ideal para nubes PaaS como Render donde los puertos SMTP 25, 465 y 587 están bloqueados por cortafuegos.
+     */
+    private void enviarViaBrevo(String destinatario, String nombreVecino, String asunto, String contenidoHtml, Resource logoResource, boolean tieneLogo) throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("sender", Map.of(
+                "name", "I. Municipalidad de El Tabo - SGSP",
+                "email", remitente
+        ));
+        payload.put("to", List.of(Map.of(
+                "email", destinatario,
+                "name", nombreVecino
+        )));
+        payload.put("subject", asunto);
+        payload.put("htmlContent", contenidoHtml);
+
+        if (tieneLogo && logoResource != null) {
+            try {
+                byte[] bytes = logoResource.getInputStream().readAllBytes();
+                String base64 = Base64.getEncoder().encodeToString(bytes);
+                payload.put("attachment", List.of(Map.of(
+                        "name", "logoEscudo",
+                        "content", base64
+                )));
+            } catch (Exception exLogo) {
+                log.warn("No se pudo adjuntar el logo para Brevo API: {}", exLogo.getMessage());
+            }
+        }
+
+        String jsonBody = objectMapper.writeValueAsString(payload);
+
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("api-key", brevoApiKey.trim())
+                .timeout(Duration.ofSeconds(15))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new RuntimeException("Brevo API HTTP " + response.statusCode() + ": " + response.body());
+        }
+    }
+
+    /**
+     * Envío tradicional vía JavaMailSender (SMTP directo).
+     */
+    private void enviarViaSmtp(String destinatario, String asunto, String contenidoHtml, Resource logoResource, boolean tieneLogo) throws Exception {
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+        helper.setFrom(remitente);
+        helper.setTo(destinatario);
+        helper.setSubject(asunto);
+        helper.setText(contenidoHtml, true);
+
+        if (tieneLogo) {
+            try {
+                String filename = logoResource.getFilename() != null ? logoResource.getFilename().toLowerCase() : "";
+                String mimeType = filename.endsWith(".svg") ? "image/svg+xml" : "image/png";
+                helper.addInline("logoEscudo", logoResource, mimeType);
+            } catch (Exception exLogo) {
+                log.warn("No se pudo incrustar el recurso de logo como inline CID, continuando envío: {}", exLogo.getMessage());
+            }
+        }
+
+        mailSender.send(mimeMessage);
     }
 
     /**
