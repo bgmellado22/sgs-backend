@@ -48,6 +48,11 @@ public class IncidenteResponseDTO {
     private DenuncianteDTO denunciante;
     private boolean esAnonimo;
 
+    // Resolución de Cierre y Notificación
+    private String resolucionMunicipal;
+    private Boolean notificadoCierreEmail;
+    private LocalDateTime fechaNotificacionCierre;
+
     // Estado lógico
     private boolean activo;
 }

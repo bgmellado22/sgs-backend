@@ -2,6 +2,7 @@ package com.conectatech.sgs_backend.controller;
 
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
+import com.conectatech.sgs_backend.dto.IncidenteEstadoRequestDTO;
 import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.service.IncidenteService;
 import jakarta.validation.Valid;
@@ -164,18 +165,9 @@ public class IncidenteController {
     @PatchMapping("/{id}/estado")
     public ResponseEntity<IncidenteResponseDTO> actualizarEstado(
             @PathVariable("id") String id,
-            @RequestBody Map<String, Object> request) {
+            @Valid @RequestBody IncidenteEstadoRequestDTO request) {
 
-        String nuevoEstado = request.get("estado") != null ? String.valueOf(request.get("estado")) : null;
-        String motivo = request.get("motivo") != null ? String.valueOf(request.get("motivo")) : null;
-        Long version = null;
-        if (request.containsKey("version") && request.get("version") != null) {
-            try {
-                version = Long.valueOf(String.valueOf(request.get("version")));
-            } catch (NumberFormatException ignored) {}
-        }
-
-        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, nuevoEstado, motivo, version);
+        IncidenteResponseDTO actualizado = incidenteService.actualizarEstado(id, request);
         return ResponseEntity.ok(actualizado);
     }
 

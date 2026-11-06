@@ -104,6 +104,15 @@ public class Incidente {
     @Field("es_anonimo")
     private boolean esAnonimo;
 
+    @Field("resolucion_municipal")
+    private String resolucionMunicipal;
+
+    @Field("notificado_cierre_email")
+    private Boolean notificadoCierreEmail;
+
+    @Field("fecha_notificacion_cierre")
+    private LocalDateTime fechaNotificacionCierre;
+
     private boolean activo;
 
     public Incidente() {

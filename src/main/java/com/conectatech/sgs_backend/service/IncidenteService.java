@@ -6,6 +6,9 @@ import com.conectatech.sgs_backend.dto.DespachoMunicipalDTO;
 import com.conectatech.sgs_backend.dto.DenuncianteDTO;
 import com.conectatech.sgs_backend.dto.IncidenteRequestDTO;
 import com.conectatech.sgs_backend.dto.IncidenteResponseDTO;
+import com.conectatech.sgs_backend.dto.IncidenteEstadoRequestDTO;
+import com.conectatech.sgs_backend.event.IncidenteCerradoEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.conectatech.sgs_backend.model.Incidente;
 import com.conectatech.sgs_backend.model.Denunciante;
 import com.conectatech.sgs_backend.model.Evidencia;
@@ -57,6 +60,7 @@ public class IncidenteService {
         private final ParametroSistemaRepository parametroRepository;
         private final GridFsTemplate gridFsTemplate;
         private final AuditoriaService auditoriaService;
+        private final ApplicationEventPublisher eventPublisher;
 
         // Guardar sin archivo (compatibilidad)
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto) {
@@ -532,6 +536,9 @@ public class IncidenteService {
                                 incidente.getDenunciante(), incidente.isEsAnonimo()));
                 dto.setEsAnonimo(incidente.isEsAnonimo());
                 dto.setActivo(incidente.isActivo());
+                dto.setResolucionMunicipal(incidente.getResolucionMunicipal());
+                dto.setNotificadoCierreEmail(incidente.getNotificadoCierreEmail());
+                dto.setFechaNotificacionCierre(incidente.getFechaNotificacionCierre());
 
                 return dto;
         }
@@ -555,25 +562,30 @@ public class IncidenteService {
         }
 
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado) {
-                return actualizarEstado(id, nuevoEstado, null, null);
+                return actualizarEstado(id, IncidenteEstadoRequestDTO.builder().estado(nuevoEstado).build());
         }
 
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo) {
-                return actualizarEstado(id, nuevoEstado, motivo, null);
+                return actualizarEstado(id, IncidenteEstadoRequestDTO.builder().estado(nuevoEstado).motivo(motivo).build());
         }
 
-        // Método para actualizar el estado de un incidente con auditoría y motivo explicativo
         public IncidenteResponseDTO actualizarEstado(String id, String nuevoEstado, String motivo, Long version) {
+                return actualizarEstado(id, IncidenteEstadoRequestDTO.builder().estado(nuevoEstado).motivo(motivo).version(version).build());
+        }
+
+        // Método para actualizar el estado de un incidente con auditoría, notificación y motivo explicativo
+        public IncidenteResponseDTO actualizarEstado(String id, IncidenteEstadoRequestDTO dto) {
                 Incidente incidenteExistente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND, "Incidente no encontrado con el ID: " + id));
 
-                validarSincronizacionVersion(incidenteExistente, version);
-                if (version != null) {
-                        incidenteExistente.setVersion(version);
+                validarSincronizacionVersion(incidenteExistente, dto.getVersion());
+                if (dto.getVersion() != null) {
+                        incidenteExistente.setVersion(dto.getVersion());
                 }
 
                 String estadoAnterior = incidenteExistente.getEstado();
+                String nuevoEstado = dto.getEstado();
 
                 if (estadoAnterior != null && estadoAnterior.equals(nuevoEstado)) {
                         return mapToDTO(incidenteExistente);
@@ -581,12 +593,17 @@ public class IncidenteService {
 
                 incidenteExistente.setEstado(nuevoEstado);
 
-                if ("Resuelto".equals(nuevoEstado) || "Cerrado".equals(nuevoEstado)) {
+                boolean esCierre = "Cerrado".equalsIgnoreCase(nuevoEstado);
+
+                if ("Resuelto".equalsIgnoreCase(nuevoEstado) || esCierre) {
                         if (incidenteExistente.getFechaCierre() == null) {
                                 incidenteExistente.setFechaCierre(LocalDateTime.now());
                                 long minutos = ChronoUnit.MINUTES.between(incidenteExistente.getFechaCreacion(),
                                                 incidenteExistente.getFechaCierre());
                                 incidenteExistente.setTiempoResolucionMinutos(minutos);
+                        }
+                        if (esCierre && dto.getResolucionMunicipal() != null && !dto.getResolucionMunicipal().isBlank()) {
+                                incidenteExistente.setResolucionMunicipal(dto.getResolucionMunicipal().trim());
                         }
                 } else {
                         incidenteExistente.setFechaCierre(null);
@@ -598,14 +615,32 @@ public class IncidenteService {
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
 
-                String detalleAuditoria = (motivo != null && !motivo.isBlank())
-                                ? motivo
+                String detalleAuditoria = (dto.getMotivo() != null && !dto.getMotivo().isBlank())
+                                ? dto.getMotivo()
                                 : ("Actualización de estado a " + nuevoEstado + " desde panel operativo");
+
+                if (esCierre && dto.getResolucionMunicipal() != null && !dto.getResolucionMunicipal().isBlank()) {
+                        detalleAuditoria += " | Resumen Resolución: " + dto.getResolucionMunicipal().trim();
+                }
 
                 // Llamar al método de auditoría
                 registrarAuditoria(actualizado.getId(), actualizado.getCodigoCorrelativo(), actor, "Estado",
                                 estadoAnterior, nuevoEstado,
                                 detalleAuditoria);
+
+                // Disparo de notificación por correo (Asíncrono)
+                boolean notificarSolicitado = dto.getNotificarDenunciante() == null || Boolean.TRUE.equals(dto.getNotificarDenunciante());
+                boolean tieneCorreoDenunciante = !actualizado.isEsAnonimo()
+                                && actualizado.getDenunciante() != null
+                                && actualizado.getDenunciante().getCorreoElectronico() != null
+                                && !actualizado.getDenunciante().getCorreoElectronico().isBlank();
+                boolean tieneResolucion = actualizado.getResolucionMunicipal() != null
+                                && !actualizado.getResolucionMunicipal().isBlank();
+
+                if (esCierre && notificarSolicitado && tieneCorreoDenunciante && tieneResolucion) {
+                        log.info("Publicando evento IncidenteCerradoEvent para notificación por correo del incidente {}", actualizado.getCodigoCorrelativo());
+                        eventPublisher.publishEvent(new IncidenteCerradoEvent(this, actualizado, actualizado.getResolucionMunicipal()));
+                }
 
                 // Gatillo global de websocket para notificar a todos los usuarios
                 Notificacion alertaGlobal = Notificacion.builder()
