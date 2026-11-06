@@ -31,8 +31,9 @@ public class ConfiguracionService {
      * Tipos de catálogo administrables dinámicamente.
      * Prioridad y Categoría son estándares fijos inmutables.
      */
-    private static final Set<String> TIPOS_PERMITIDOS = Set.of("ORIGEN", "TIPO_INCIDENTE", "UNIDAD_POLICIAL",
-            "RESULTADO_PROCEDIMIENTO");
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of(
+            "ORIGEN", "TIPO_INCIDENTE", "UNIDAD_POLICIAL",
+            "RESULTADO_PROCEDIMIENTO", "CANAL_ENLACE", "TIPO_PATRULLAJE");
 
     /**
      * Etiquetas legibles para el mensaje de auditoría por tipo.
@@ -43,7 +44,9 @@ public class ConfiguracionService {
             "CATEGORIA", "Categoría",
             "TIPO_INCIDENTE", "Tipo de Incidente",
             "UNIDAD_POLICIAL", "Unidad Policial",
-            "RESULTADO_PROCEDIMIENTO", "Resultado de Procedimiento");
+            "RESULTADO_PROCEDIMIENTO", "Resultado de Procedimiento",
+            "CANAL_ENLACE", "Canal de Enlace",
+            "TIPO_PATRULLAJE", "Tipo de Patrullaje");
 
     // ──────────────────────────────────────────────
     // PARÁMETROS DEL SISTEMA (Tiempos de Respuesta y otros)
