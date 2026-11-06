@@ -602,8 +602,11 @@ public class IncidenteService {
                                                 incidenteExistente.getFechaCierre());
                                 incidenteExistente.setTiempoResolucionMinutos(minutos);
                         }
-                        if (esCierre && dto.getResolucionMunicipal() != null && !dto.getResolucionMunicipal().isBlank()) {
-                                incidenteExistente.setResolucionMunicipal(dto.getResolucionMunicipal().trim());
+                        if (esCierre) {
+                                String resolucion = (dto.getResolucionMunicipal() != null && !dto.getResolucionMunicipal().isBlank())
+                                                ? dto.getResolucionMunicipal().trim()
+                                                : "Procedimiento finalizado y adoptado conforme a los protocolos operativos.";
+                                incidenteExistente.setResolucionMunicipal(resolucion);
                         }
                 } else {
                         incidenteExistente.setFechaCierre(null);
@@ -629,17 +632,28 @@ public class IncidenteService {
                                 detalleAuditoria);
 
                 // Disparo de notificación por correo (Asíncrono)
-                boolean notificarSolicitado = dto.getNotificarDenunciante() == null || Boolean.TRUE.equals(dto.getNotificarDenunciante());
-                boolean tieneCorreoDenunciante = !actualizado.isEsAnonimo()
-                                && actualizado.getDenunciante() != null
-                                && actualizado.getDenunciante().getCorreoElectronico() != null
-                                && !actualizado.getDenunciante().getCorreoElectronico().isBlank();
-                boolean tieneResolucion = actualizado.getResolucionMunicipal() != null
-                                && !actualizado.getResolucionMunicipal().isBlank();
+                if (esCierre) {
+                        boolean notificarSolicitado = dto.getNotificarDenunciante() == null || Boolean.TRUE.equals(dto.getNotificarDenunciante());
+                        boolean esAnonimo = actualizado.isEsAnonimo();
+                        Denunciante den = actualizado.getDenunciante();
+                        String emailDenunciante = den != null ? den.getCorreoElectronico() : null;
+                        boolean tieneCorreo = emailDenunciante != null && !emailDenunciante.isBlank();
 
-                if (esCierre && notificarSolicitado && tieneCorreoDenunciante && tieneResolucion) {
-                        log.info("Publicando evento IncidenteCerradoEvent para notificación por correo del incidente {}", actualizado.getCodigoCorrelativo());
-                        eventPublisher.publishEvent(new IncidenteCerradoEvent(this, actualizado, actualizado.getResolucionMunicipal()));
+                        if (!notificarSolicitado) {
+                                log.info("Incidente {}: notificación por correo omitida (operador desmarcó la opción).", actualizado.getCodigoCorrelativo());
+                        } else if (esAnonimo) {
+                                log.info("Incidente {}: notificación por correo omitida (denuncia registrada como anónima).", actualizado.getCodigoCorrelativo());
+                        } else if (!tieneCorreo) {
+                                log.info("Incidente {}: notificación por correo omitida (el denunciante no proporcionó correo electrónico).", actualizado.getCodigoCorrelativo());
+                        } else {
+                                String resolucionDespacho = (actualizado.getResolucionMunicipal() != null && !actualizado.getResolucionMunicipal().isBlank())
+                                                ? actualizado.getResolucionMunicipal()
+                                                : "Procedimiento finalizado y adoptado conforme a los protocolos operativos.";
+                                log.info("Publicando evento IncidenteCerradoEvent para notificación por correo a {} en incidente {}",
+                                                com.conectatech.sgs_backend.util.PiiMaskingUtils.maskEmail(emailDenunciante),
+                                                actualizado.getCodigoCorrelativo());
+                                eventPublisher.publishEvent(new IncidenteCerradoEvent(this, actualizado, resolucionDespacho));
+                        }
                 }
 
                 // Gatillo global de websocket para notificar a todos los usuarios

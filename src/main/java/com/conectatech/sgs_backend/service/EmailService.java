@@ -126,11 +126,17 @@ public class EmailService {
 
             // Si el logo está presente en el classpath, se asocia como inline CID
             if (tieneLogo) {
-                String filename = logoResource.getFilename() != null ? logoResource.getFilename().toLowerCase() : "";
-                String mimeType = filename.endsWith(".svg") ? "image/svg+xml" : "image/png";
-                helper.addInline("logoEscudo", logoResource, mimeType);
+                try {
+                    String filename = logoResource.getFilename() != null ? logoResource.getFilename().toLowerCase() : "";
+                    String mimeType = filename.endsWith(".svg") ? "image/svg+xml" : "image/png";
+                    helper.addInline("logoEscudo", logoResource, mimeType);
+                } catch (Exception exLogo) {
+                    log.warn("No se pudo incrustar el recurso de logo como inline CID, continuando envío: {}", exLogo.getMessage());
+                }
             }
 
+            log.info("Despachando correo SMTP institucional hacia {} para el incidente {}...",
+                    PiiMaskingUtils.maskEmail(destinatario), folio);
             mailSender.send(mimeMessage);
             log.info("Correo de notificación de cierre enviado exitosamente a {} para el incidente {}",
                     PiiMaskingUtils.maskEmail(destinatario), folio);
@@ -176,7 +182,9 @@ public class EmailService {
                 "classpath:assets/Escudo_de_Armas_de_El_Tabo.svg",
                 "classpath:assets/Escudo_de_Armas_de_El_Tabo.png",
                 "classpath:Escudo_de_Armas_de_El_Tabo.svg",
-                "classpath:Escudo_de_Armas_de_El_Tabo.png"
+                "classpath:Escudo_de_Armas_de_El_Tabo.png",
+                "classpath:logo-el-tabo.png",
+                "classpath:static/logo-el-tabo.png"
         };
         for (String ruta : posiblesRutas) {
             try {
