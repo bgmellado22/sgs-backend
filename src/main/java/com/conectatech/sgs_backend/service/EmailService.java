@@ -233,7 +233,7 @@ public class EmailService {
                 byte[] bytes = logoResource.getInputStream().readAllBytes();
                 String base64 = Base64.getEncoder().encodeToString(bytes);
                 payload.put("attachment", List.of(Map.of(
-                        "name", "logoEscudo",
+                        "name", "logoEscudo.png",
                         "content", base64)));
             } catch (Exception exLogo) {
                 log.warn("No se pudo adjuntar el logo para Brevo API: {}", exLogo.getMessage());
@@ -279,7 +279,7 @@ public class EmailService {
             try {
                 String filename = logoResource.getFilename() != null ? logoResource.getFilename().toLowerCase() : "";
                 String mimeType = filename.endsWith(".svg") ? "image/svg+xml" : "image/png";
-                helper.addInline("logoEscudo", logoResource, mimeType);
+                helper.addInline("logoEscudo.png", logoResource, mimeType);
             } catch (Exception exLogo) {
                 log.warn("No se pudo incrustar el recurso de logo como inline CID, continuando envío: {}",
                         exLogo.getMessage());
@@ -327,7 +327,7 @@ public class EmailService {
             String resolucionTexto,
             boolean tieneLogo) {
         String logoHtml = tieneLogo
-                ? "<img src=\"cid:logoEscudo\" alt=\"Escudo de El Tabo\" style=\"max-height: 80px; width: auto; margin-bottom: 12px;\" />"
+                ? "<img src=\"cid:logoEscudo.png\" alt=\"Escudo de El Tabo\" style=\"max-height: 80px; width: auto; margin-bottom: 12px;\" />"
                 : "<div style=\"font-size: 32px; margin-bottom: 8px;\">🏛️</div>";
 
         return """
