@@ -54,7 +54,8 @@ public class EmailService {
     public void sendPasswordResetEmail(String to, String token) {
         String resetUrl = "http://localhost:5173/recuperar-clave?token=" + token;
         String asunto = "SGS El Tabo - Recuperación de Contraseña";
-        String contenidoTexto = "Hola,\n\nHas solicitado restablecer tu contraseña para el Sistema de Gestión de Seguridad (SGS).\n\n" +
+        String contenidoTexto = "Hola,\n\nHas solicitado restablecer tu contraseña para el Sistema de Gestión de Seguridad (SGS).\n\n"
+                +
                 "Haz clic en el siguiente enlace para crear una nueva contraseña:\n" +
                 resetUrl + "\n\n" +
                 "Este enlace expirará en 15 minutos por motivos de seguridad.\n" +
@@ -66,8 +67,7 @@ public class EmailService {
                         "sender", Map.of("name", "SGSP El Tabo", "email", remitente),
                         "to", List.of(Map.of("email", to)),
                         "subject", asunto,
-                        "textContent", contenidoTexto
-                );
+                        "textContent", contenidoTexto);
                 String jsonBody = objectMapper.writeValueAsString(payload);
                 HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
                 HttpRequest request = HttpRequest.newBuilder()
@@ -82,7 +82,8 @@ public class EmailService {
                 log.info("Correo de restablecimiento enviado vía Brevo API hacia {}", PiiMaskingUtils.maskEmail(to));
                 return;
             } catch (Exception e) {
-                log.warn("Fallo al enviar correo de restablecimiento vía Brevo, reintentando vía SMTP: {}", e.getMessage());
+                log.warn("Fallo al enviar correo de restablecimiento vía Brevo, reintentando vía SMTP: {}",
+                        e.getMessage());
             }
         }
 
@@ -109,10 +110,13 @@ public class EmailService {
     }
 
     /**
-     * Construye y envía el correo institucional con el reporte cerrado al vecino denunciante.
+     * Construye y envía el correo institucional con el reporte cerrado al vecino
+     * denunciante.
      * Soporta despacho híbrido:
-     * - Si está configurada BREVO_API_KEY: Despacha vía HTTP REST (puerto 443, ideal para Render / Cloud sin bloqueos).
-     * - Si no está configurada: Despacha vía SMTP tradicional (puerto 587, ideal para despliegues on-premise en El Tabo).
+     * - Si está configurada BREVO_API_KEY: Despacha vía HTTP REST (puerto 443,
+     * ideal para Render / Cloud sin bloqueos).
+     * - Si no está configurada: Despacha vía SMTP tradicional (puerto 587, ideal
+     * para despliegues on-premise en El Tabo).
      */
     public void enviarCorreoResolucionCierre(Incidente incidente, String resolucionMunicipal) {
         String folio = incidente.getCodigoCorrelativo() != null
@@ -120,7 +124,8 @@ public class EmailService {
                 : ("#" + incidente.getId());
 
         Denunciante denunciante = incidente.getDenunciante();
-        if (denunciante == null || denunciante.getCorreoElectronico() == null || denunciante.getCorreoElectronico().isBlank()) {
+        if (denunciante == null || denunciante.getCorreoElectronico() == null
+                || denunciante.getCorreoElectronico().isBlank()) {
             log.warn("Incidente {} no cuenta con correo electrónico de denunciante para notificación.", folio);
             return;
         }
@@ -154,18 +159,19 @@ public class EmailService {
                 tipoIncidente,
                 fechaIngresoStr,
                 resolucionTexto,
-                tieneLogo
-        );
+                tieneLogo);
 
         boolean usarBrevo = brevoApiKey != null && !brevoApiKey.isBlank();
 
         try {
             if (usarBrevo) {
-                log.info("Despachando correo institucional vía Brevo REST API (HTTPS puerto 443) hacia {} para el incidente {}...",
+                log.info(
+                        "Despachando correo institucional vía Brevo REST API (HTTPS puerto 443) hacia {} para el incidente {}...",
                         PiiMaskingUtils.maskEmail(destinatario), folio);
                 enviarViaBrevo(destinatario, nombreVecino, asunto, contenidoHtml, logoResource, tieneLogo);
             } else {
-                log.info("Despachando correo institucional vía SMTP estándar (puerto 587) hacia {} para el incidente {}...",
+                log.info(
+                        "Despachando correo institucional vía SMTP estándar (puerto 587) hacia {} para el incidente {}...",
                         PiiMaskingUtils.maskEmail(destinatario), folio);
                 enviarViaSmtp(destinatario, asunto, contenidoHtml, logoResource, tieneLogo);
             }
@@ -187,11 +193,12 @@ public class EmailService {
                     "Notificación por Correo",
                     "Pendiente",
                     "Enviado",
-                    "Notificación de cierre remitida con éxito a " + PiiMaskingUtils.maskEmail(destinatario) + " [" + canal + "]"
-            );
+                    "Notificación de cierre remitida con éxito a " + PiiMaskingUtils.maskEmail(destinatario) + " ["
+                            + canal + "]");
 
         } catch (Exception e) {
-            log.error("Fallo al despachar correo de notificación de cierre para el incidente {}: {}", folio, e.getMessage(), e);
+            log.error("Fallo al despachar correo de notificación de cierre para el incidente {}: {}", folio,
+                    e.getMessage(), e);
 
             auditoriaService.registrarAuditoria(
                     incidente.getId(),
@@ -200,25 +207,24 @@ public class EmailService {
                     "Notificación por Correo",
                     "Pendiente",
                     "Error",
-                    "Fallo al enviar correo a " + PiiMaskingUtils.maskEmail(destinatario) + ": " + e.getMessage()
-            );
+                    "Fallo al enviar correo a " + PiiMaskingUtils.maskEmail(destinatario) + ": " + e.getMessage());
         }
     }
 
     /**
      * Envío transaccional vía Brevo REST API (HTTPS puerto 443).
-     * Ideal para nubes PaaS como Render donde los puertos SMTP 25, 465 y 587 están bloqueados por cortafuegos.
+     * Ideal para nubes PaaS como Render donde los puertos SMTP 25, 465 y 587 están
+     * bloqueados por cortafuegos.
      */
-    private void enviarViaBrevo(String destinatario, String nombreVecino, String asunto, String contenidoHtml, Resource logoResource, boolean tieneLogo) throws Exception {
+    private void enviarViaBrevo(String destinatario, String nombreVecino, String asunto, String contenidoHtml,
+            Resource logoResource, boolean tieneLogo) throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("sender", Map.of(
                 "name", "I. Municipalidad de El Tabo - SGSP",
-                "email", remitente
-        ));
+                "email", remitente));
         payload.put("to", List.of(Map.of(
                 "email", destinatario,
-                "name", nombreVecino
-        )));
+                "name", nombreVecino)));
         payload.put("subject", asunto);
         payload.put("htmlContent", contenidoHtml);
 
@@ -228,8 +234,7 @@ public class EmailService {
                 String base64 = Base64.getEncoder().encodeToString(bytes);
                 payload.put("attachment", List.of(Map.of(
                         "name", "logoEscudo",
-                        "content", base64
-                )));
+                        "content", base64)));
             } catch (Exception exLogo) {
                 log.warn("No se pudo adjuntar el logo para Brevo API: {}", exLogo.getMessage());
             }
@@ -260,7 +265,8 @@ public class EmailService {
     /**
      * Envío tradicional vía JavaMailSender (SMTP directo).
      */
-    private void enviarViaSmtp(String destinatario, String asunto, String contenidoHtml, Resource logoResource, boolean tieneLogo) throws Exception {
+    private void enviarViaSmtp(String destinatario, String asunto, String contenidoHtml, Resource logoResource,
+            boolean tieneLogo) throws Exception {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
@@ -275,7 +281,8 @@ public class EmailService {
                 String mimeType = filename.endsWith(".svg") ? "image/svg+xml" : "image/png";
                 helper.addInline("logoEscudo", logoResource, mimeType);
             } catch (Exception exLogo) {
-                log.warn("No se pudo incrustar el recurso de logo como inline CID, continuando envío: {}", exLogo.getMessage());
+                log.warn("No se pudo incrustar el recurso de logo como inline CID, continuando envío: {}",
+                        exLogo.getMessage());
             }
         }
 
@@ -283,7 +290,8 @@ public class EmailService {
     }
 
     /**
-     * Intenta resolver el recurso del escudo institucional desde ubicaciones típicas en assets.
+     * Intenta resolver el recurso del escudo institucional desde ubicaciones
+     * típicas en assets.
      */
     private Resource buscarRecursoLogo() {
         String[] posiblesRutas = {
@@ -317,117 +325,116 @@ public class EmailService {
             String tipoIncidente,
             String fechaIngresoStr,
             String resolucionTexto,
-            boolean tieneLogo
-    ) {
+            boolean tieneLogo) {
         String logoHtml = tieneLogo
                 ? "<img src=\"cid:logoEscudo\" alt=\"Escudo de El Tabo\" style=\"max-height: 80px; width: auto; margin-bottom: 12px;\" />"
                 : "<div style=\"font-size: 32px; margin-bottom: 8px;\">🏛️</div>";
 
         return """
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Actualización de su reporte</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5;">
-            <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 15px;">
-                <tr>
-                    <td align="center">
-                        <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
-                            <!-- CABECERA INSTITUCIONAL -->
-                            <tr>
-                                <td align="center" style="padding: 32px 24px 20px 24px; background: linear-gradient(180deg, #f8fafc 0%%, #ffffff 100%%); border-bottom: 2px solid #0284c7;">
-                                    %s
-                                    <h1 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">I. MUNICIPALIDAD DE EL TABO</h1>
-                                    <p style="margin: 4px 0 0 0; font-size: 13px; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em;">Dirección de Seguridad Pública</p>
-                                </td>
-                            </tr>
-                            
-                            <!-- CUERPO PRINCIPAL -->
-                            <tr>
-                                <td style="padding: 28px 28px 20px 28px;">
-                                    <p style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #334155;">
-                                        Estimado/a %s:
-                                    </p>
-                                    <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b; line-height: 1.6;">
-                                        Le informamos que su reporte de seguridad ciudadana ingresado a nuestro sistema ha concluido su ciclo operativo y ha sido formalmente cerrado por el equipo municipal.
-                                    </p>
-                                    
-                                    <!-- FICHA DEL REPORTE -->
-                                    <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
-                                        <tr>
-                                            <td style="padding: 18px 20px;">
-                                                <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0">
-                                                    <tr>
-                                                        <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b; width: 42%%;">N° de Folio:</td>
-                                                        <td style="padding: 6px 0; font-size: 14px; font-weight: 800; color: #0f172a;">%s</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Tipo de Incidente:</td>
-                                                        <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #1e293b;">%s</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Fecha y hora de ingreso:</td>
-                                                        <td style="padding: 6px 0; font-size: 13px; font-weight: 500; color: #1e293b;">%s</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Estado:</td>
-                                                        <td style="padding: 6px 0;">
-                                                            <span style="display: inline-block; background-color: #dcfce7; color: #15803d; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; border: 1px solid #bbf7d0;">
-                                                                Cerrado
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                </table>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                    
-                                    <!-- SECCIÓN RESOLUCIÓN MUNICIPAL -->
-                                    <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 8px; padding: 16px 18px; margin-bottom: 24px;">
-                                        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #166534; letter-spacing: 0.04em; margin-bottom: 6px;">
-                                            Resolución Municipal
-                                        </div>
-                                        <div style="font-size: 13px; color: #14532d; line-height: 1.6; white-space: pre-line;">
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Actualización de su reporte</title>
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5;">
+                    <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 15px;">
+                        <tr>
+                            <td align="center">
+                                <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
+                                    <!-- CABECERA INSTITUCIONAL -->
+                                    <tr>
+                                        <td align="center" style="padding: 32px 24px 20px 24px; background: linear-gradient(180deg, #f8fafc 0%%, #ffffff 100%%); border-bottom: 2px solid #0284c7;">
                                             %s
-                                        </div>
-                                    </div>
-                                    
-                                    <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.5;">
-                                        Agradecemos su colaboración y compromiso con la seguridad y convivencia de nuestra comuna.
-                                    </p>
-                                </td>
-                            </tr>
-                            
-                            <!-- PIE DE PÁGINA -->
-                            <tr>
-                                <td style="padding: 20px 24px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-                                    <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #475569;">
-                                        Sistema de Gestión de Seguridad Pública (SGSP)
-                                    </p>
-                                    <p style="margin: 0 0 8px 0; font-size: 11px; color: #94a3b8;">
-                                        Municipalidad de El Tabo &bull; Fono Central de Seguridad: 14XX
-                                    </p>
-                                    <p style="margin: 0; font-size: 10px; color: #94a3b8; line-height: 1.4;">
-                                        Este es un correo electrónico generado automáticamente. Por favor no responda directamente a este mensaje.
-                                    </p>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
-        """.formatted(
-                logoHtml,
-                nombreVecino,
-                folio,
-                tipoIncidente,
-                fechaIngresoStr,
-                resolucionTexto
-        );
+                                            <h1 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">I. MUNICIPALIDAD DE EL TABO</h1>
+                                            <p style="margin: 4px 0 0 0; font-size: 13px; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em;">Dirección de Seguridad Pública</p>
+                                        </td>
+                                    </tr>
+
+                                    <!-- CUERPO PRINCIPAL -->
+                                    <tr>
+                                        <td style="padding: 28px 28px 20px 28px;">
+                                            <p style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #334155;">
+                                                Estimado/a %s:
+                                            </p>
+                                            <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b; line-height: 1.6;">
+                                                Le informamos que su reporte de seguridad ciudadana ingresado a nuestro sistema ha concluido su ciclo operativo y ha sido formalmente cerrado por el equipo municipal.
+                                            </p>
+
+                                            <!-- FICHA DEL REPORTE -->
+                                            <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+                                                <tr>
+                                                    <td style="padding: 18px 20px;">
+                                                        <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0">
+                                                            <tr>
+                                                                <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b; width: 42%%;">N° de Folio:</td>
+                                                                <td style="padding: 6px 0; font-size: 14px; font-weight: 800; color: #0f172a;">%s</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Tipo de Incidente:</td>
+                                                                <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #1e293b;">%s</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Fecha y hora de ingreso:</td>
+                                                                <td style="padding: 6px 0; font-size: 13px; font-weight: 500; color: #1e293b;">%s</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">Estado:</td>
+                                                                <td style="padding: 6px 0;">
+                                                                    <span style="display: inline-block; background-color: #dcfce7; color: #15803d; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                                                                        Cerrado
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <!-- SECCIÓN RESOLUCIÓN MUNICIPAL -->
+                                            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 8px; padding: 16px 18px; margin-bottom: 24px;">
+                                                <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #166534; letter-spacing: 0.04em; margin-bottom: 6px;">
+                                                    Resolución Municipal
+                                                </div>
+                                                <div style="font-size: 13px; color: #14532d; line-height: 1.6; white-space: pre-line;">
+                                                    %s
+                                                </div>
+                                            </div>
+
+                                            <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.5;">
+                                                Agradecemos su colaboración y compromiso con la seguridad y convivencia de nuestra comuna.
+                                            </p>
+                                        </td>
+                                    </tr>
+
+                                    <!-- PIE DE PÁGINA -->
+                                    <tr>
+                                        <td style="padding: 20px 24px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+                                            <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #475569;">
+                                                Sistema de Gestión de Seguridad Pública
+                                            </p>
+                                            <p style="margin: 0 0 8px 0; font-size: 11px; color: #94a3b8;">
+                                                Municipalidad de El Tabo
+                                            </p>
+                                            <p style="margin: 0; font-size: 10px; color: #94a3b8; line-height: 1.4;">
+                                                Este es un correo electrónico generado automáticamente. Por favor no responda directamente a este mensaje.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                """
+                .formatted(
+                        logoHtml,
+                        nombreVecino,
+                        folio,
+                        tipoIncidente,
+                        fechaIngresoStr,
+                        resolucionTexto);
     }
 }
