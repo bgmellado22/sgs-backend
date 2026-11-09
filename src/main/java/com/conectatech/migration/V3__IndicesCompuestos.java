@@ -6,32 +6,42 @@ import io.mongock.api.annotations.RollbackExecution;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-@ChangeUnit(id = "indices-compuestos", order = "007", author = "conectatech")
-public class V7__IndicesCompuestos {
+/**
+ * Creación de índices compuestos para optimizar consultas de alto rendimiento
+ * y filtros frecuentes en incidentes y catálogos.
+ */
+@ChangeUnit(id = "indices-compuestos", order = "003", author = "conectatech")
+public class V3__IndicesCompuestos {
 
     @Execution
     public void execution(MongoTemplate mongoTemplate) {
-        if (mongoTemplate.collectionExists("incidentes")) {
-            mongoTemplate.getCollection("incidentes").createIndex(
-                    new Document("activo", 1)
-                            .append("estado", 1)
-                            .append("prioridad", 1)
-                            .append("fecha_creacion", -1)
-            );
-
-            mongoTemplate.getCollection("incidentes").createIndex(
-                    new Document("activo", 1)
-                            .append("categoria", 1)
-                            .append("fecha_creacion", -1)
-            );
+        // 1. Índices para la colección incidentes
+        if (!mongoTemplate.collectionExists("incidentes")) {
+            mongoTemplate.createCollection("incidentes");
         }
 
-        if (mongoTemplate.collectionExists("catalogos")) {
-            mongoTemplate.getCollection("catalogos").createIndex(
-                    new Document("tipo", 1)
-                            .append("activo", 1)
-            );
+        mongoTemplate.getCollection("incidentes").createIndex(
+                new Document("activo", 1)
+                        .append("estado", 1)
+                        .append("prioridad", 1)
+                        .append("fecha_creacion", -1)
+        );
+
+        mongoTemplate.getCollection("incidentes").createIndex(
+                new Document("activo", 1)
+                        .append("categoria", 1)
+                        .append("fecha_creacion", -1)
+        );
+
+        // 2. Índices para la colección catalogos
+        if (!mongoTemplate.collectionExists("catalogos")) {
+            mongoTemplate.createCollection("catalogos");
         }
+
+        mongoTemplate.getCollection("catalogos").createIndex(
+                new Document("tipo", 1)
+                        .append("activo", 1)
+        );
     }
 
     @RollbackExecution
@@ -65,3 +75,4 @@ public class V7__IndicesCompuestos {
         }
     }
 }
+

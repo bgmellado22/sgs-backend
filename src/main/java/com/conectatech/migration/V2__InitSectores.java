@@ -10,19 +10,20 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import java.util.Arrays;
 import java.util.List;
 
-// order "003": localidades de la comuna para el ranking territorial (Hotspots)
-@ChangeUnit(id = "init-sectores", order = "003", author = "conectatech")
-public class V3__InitSectores {
+/**
+ * Inicialización de las localidades de la comuna de El Tabo para
+ * georreferenciación y análisis territorial (Hotspots).
+ */
+@ChangeUnit(id = "init-sectores", order = "002", author = "conectatech")
+public class V2__InitSectores {
 
     @Execution
     public void execution(MongoTemplate mongoTemplate) {
-
         if (!mongoTemplate.collectionExists("sectores")) {
             mongoTemplate.createCollection("sectores");
         }
 
         if (mongoTemplate.getCollection("sectores").countDocuments() == 0) {
-
             // Coordenadas aproximadas del centro de cada localidad (de norte a sur por la costa)
             List<Document> sectores = Arrays.asList(
                 sector("6a6000000000000000000001", "Isla Negra",     -71.6850, -33.4420),
@@ -52,3 +53,4 @@ public class V3__InitSectores {
         }
     }
 }
+
