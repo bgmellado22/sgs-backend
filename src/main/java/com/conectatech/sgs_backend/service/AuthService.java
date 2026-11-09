@@ -34,14 +34,16 @@ public class AuthService {
         private final JwtUtil jwtUtil;
         private final AuthenticationManager authenticationManager;
         private final AuditoriaService auditoriaService;
+        private final ClaveUnicaService claveUnicaService;
 
         public AuthResponse register(RegisterRequest request) {
-                // Validar duplicados antes de guardar
-                if (usuarioRepository.existsByEmail(request.getEmail())) {
+                // Validar duplicados antes de guardar (comparación flexible de RUN y correo en minúsculas)
+                String emailNormalizado = request.getEmail().trim().toLowerCase();
+                if (usuarioRepository.existsByEmail(emailNormalizado)) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo ya está registrado.");
                 }
-                if (usuarioRepository.existsByRun(request.getRun())) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El RUN ya está registrado.");
+                if (claveUnicaService.buscarPorRun(request.getRun()).isPresent()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El RUN ya está registrado en el sistema.");
                 }
 
                 // Identificar actor de la petición y validar privilegios (ISO 27001 A.5.15 / A.8.2)
@@ -54,18 +56,21 @@ public class AuthService {
                 // Solo un usuario con rol ADMINISTRADOR autenticado puede asignar roles privilegiados.
                 RolUsuario rol = (esAdmin && request.getRol() != null) ? request.getRol() : RolUsuario.CIUDADANO;
 
-                String nombreCompleto = (request.getSegundoApellido() != null && !request.getSegundoApellido().isBlank())
-                                ? request.getNombres() + " " + request.getPrimerApellido() + " " + request.getSegundoApellido().trim()
-                                : request.getNombres() + " " + request.getPrimerApellido();
+                String nombres = request.getNombres().trim();
+                String primerApellido = request.getPrimerApellido().trim();
+                String segundoApellido = request.getSegundoApellido() != null ? request.getSegundoApellido().trim() : "";
+                String nombreCompleto = segundoApellido.isEmpty()
+                                ? nombres + " " + primerApellido
+                                : nombres + " " + primerApellido + " " + segundoApellido;
 
+                // Documento sin contraseña: La autenticación es 100% ClaveÚnica (OIDC)
                 var user = Usuario.builder()
-                                .run(request.getRun())
-                                .nombres(request.getNombres())
-                                .primerApellido(request.getPrimerApellido())
-                                .segundoApellido(request.getSegundoApellido())
+                                .run(request.getRun().trim())
+                                .nombres(nombres)
+                                .primerApellido(primerApellido)
+                                .segundoApellido(segundoApellido)
                                 .nombreCompleto(nombreCompleto.trim())
-                                .email(request.getEmail())
-                                .password(passwordEncoder.encode(request.getPassword()))
+                                .email(emailNormalizado)
                                 .rol(rol)
                                 .estado(true)
                                 .intentosFallidos(0)
@@ -77,17 +82,16 @@ public class AuthService {
                 String actorId = "SISTEMA";
                 String nombreActor = "Auto-registro";
                 String rolActor = "SISTEMA";
-                String comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por auto-registro (Rol: " + user.getRol().name() + ")";
+                String comentario = "Nuevo usuario " + user.getNombreCompleto() + " enrolado en padrón institucional (Rol: " + user.getRol().name() + ")";
 
                 if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
                         try {
                                 Usuario actorAuth = (Usuario) auth.getPrincipal();
                                 actorId = actorAuth.getId();
                                 nombreActor = actorAuth.getNombreCompleto();
-                                rolActor = actorAuth.getRol().name();
-                                comentario = "Nuevo usuario " + user.getNombreCompleto() + " registrado por " + nombreActor + " (Rol: " + user.getRol().name() + ")";
-                        } catch (Exception e) {
-                                // Fallback si el principal no es del tipo Usuario
+                                rolActor = actorAuth.getRol() != null ? actorAuth.getRol().name() : "ADMINISTRADOR";
+                                comentario = "Funcionario " + user.getNombreCompleto() + " enrolado por Administrador " + nombreActor + " (Rol: " + user.getRol().name() + ")";
+                        } catch (Exception ignored) {
                         }
                 }
 

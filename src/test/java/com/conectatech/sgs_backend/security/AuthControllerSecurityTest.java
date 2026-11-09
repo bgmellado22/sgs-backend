@@ -55,14 +55,14 @@ public class AuthControllerSecurityTest {
     private UserDetailsService userDetailsService;
 
     @Test
-    @DisplayName("POST /register con datos válidos y contraseña robusta → 200 OK")
+    @DisplayName("POST /register con datos válidos de enrolamiento (sin password) → 200 OK")
     public void testRegistro_DatosValidos_Retorna200() throws Exception {
         RegisterRequest request = RegisterRequest.builder()
                 .run("11.111.111-1")
                 .nombres("Juan Carlos")
                 .primerApellido("Pérez")
+                .segundoApellido("González")
                 .email("juan.perez@eltabo.cl")
-                .password("ClaveSegura#2026")
                 .rol(RolUsuario.CIUDADANO)
                 .build();
 
@@ -82,21 +82,20 @@ public class AuthControllerSecurityTest {
     }
 
     @Test
-    @DisplayName("POST /register con contraseña débil (< 8 chars o sin números/símbolos) → 400 Bad Request")
-    public void testRegistro_PasswordDebil_Retorna400() throws Exception {
+    @DisplayName("POST /register sin segundo apellido obligatorio → 400 Bad Request")
+    public void testRegistro_SinSegundoApellido_Retorna400() throws Exception {
         RegisterRequest request = RegisterRequest.builder()
                 .run("11.111.111-1")
                 .nombres("Juan")
                 .primerApellido("Pérez")
                 .email("juan@eltabo.cl")
-                .password("12345") // Débil: sin mayúscula, minúscula, símbolo ni longitud mínima
                 .build();
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.password").exists());
+                .andExpect(jsonPath("$.segundoApellido").exists());
     }
 
     @Test
@@ -106,8 +105,8 @@ public class AuthControllerSecurityTest {
                 .run("11.111.111-9") // Dígito verificador incorrecto
                 .nombres("Juan")
                 .primerApellido("Pérez")
+                .segundoApellido("González")
                 .email("juan@eltabo.cl")
-                .password("ClaveSegura#2026")
                 .build();
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -124,8 +123,8 @@ public class AuthControllerSecurityTest {
                 .run("11.111.111-1")
                 .nombres("Juan")
                 .primerApellido("Pérez")
+                .segundoApellido("González")
                 .email("correo-invalido-sin-arroba")
-                .password("ClaveSegura#2026")
                 .build();
 
         mockMvc.perform(post("/api/v1/auth/register")

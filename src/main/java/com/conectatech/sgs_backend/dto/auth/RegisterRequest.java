@@ -4,7 +4,6 @@ import com.conectatech.sgs_backend.model.enums.RolUsuario;
 import com.conectatech.sgs_backend.validation.RutChileno;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,19 +28,13 @@ public class RegisterRequest {
     @Size(min = 2, max = 80, message = "El primer apellido debe tener entre 2 y 80 caracteres.")
     private String primerApellido;
 
-    @Size(max = 80, message = "El segundo apellido no debe superar los 80 caracteres.")
+    @NotBlank(message = "El segundo apellido es obligatorio.")
+    @Size(min = 2, max = 80, message = "El segundo apellido debe tener entre 2 y 80 caracteres.")
     private String segundoApellido;
 
     @NotBlank(message = "El correo electrónico es obligatorio.")
     @Email(message = "Ingrese un correo electrónico válido (ej: usuario@dominio.cl).")
     private String email;
-
-    @NotBlank(message = "La contraseña es obligatoria.")
-    @Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~]).{8,}$",
-        message = "La contraseña debe tener al menos 8 caracteres e incluir mayúscula, minúscula, número y carácter especial."
-    )
-    private String password;
 
     private RolUsuario rol;
 }
