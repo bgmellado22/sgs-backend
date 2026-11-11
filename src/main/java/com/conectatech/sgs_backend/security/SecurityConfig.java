@@ -118,6 +118,12 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/v1/notificaciones/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
 
+                                                // Módulo de Patrullaje Preventivo Georreferenciado
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/patrullajes")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR")
+                                                .requestMatchers("/api/v1/patrullajes/**")
+                                                .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
+
                                                 // Cualquier otra ruta exige token válido
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
