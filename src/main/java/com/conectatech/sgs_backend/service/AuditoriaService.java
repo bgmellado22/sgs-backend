@@ -49,6 +49,12 @@ public class AuditoriaService {
         String nombreActor = actor != null ? actor.getNombreCompleto() : "Sistema";
         String rolActor = actor != null && actor.getRol() != null ? actor.getRol().name() : "SISTEMA";
 
+        // Filtro de auditoría: los eventos de sesión de ciudadanos no se persisten en bitácora operativa
+        if (esSesionDeCiudadano(rolActor, campoModificado)) {
+            log.debug("Se descarta registro de sesión en bitácora para rol CIUDADANO: {}", nombreActor);
+            return;
+        }
+
         BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
                 .incidenteId(incidenteId)
                 .codigoCorrelativo(codigoCorrelativo)
@@ -93,6 +99,12 @@ public class AuditoriaService {
             return;
         }
 
+        // Filtro de auditoría: los eventos de sesión de ciudadanos no se persisten en bitácora operativa
+        if (esSesionDeCiudadano(rolActor, campoModificado)) {
+            log.debug("Se descarta registro de sesión en bitácora para rol CIUDADANO: {}", nombreActor);
+            return;
+        }
+
         BitacoraProcedimiento registro = BitacoraProcedimiento.builder()
                 .usuarioId(usuarioId)
                 .nombreActor(nombreActor)
@@ -106,5 +118,20 @@ public class AuditoriaService {
 
         bitacoraRepository.save(registro);
         log.info("Auditoría forense registrada manualmente: [Campo: {}, Actor: {}] - {}", campoModificado, nombreActor, comentario);
+    }
+
+    /**
+     * Valida si un evento corresponde a autenticación/sesión (login/logout) y el actor es un ciudadano.
+     * En tal caso se descarta para proteger la bitácora operativa de sobrecarga.
+     */
+    private boolean esSesionDeCiudadano(String rolActor, String campoModificado) {
+        if (rolActor == null || campoModificado == null) {
+            return false;
+        }
+        if (!"CIUDADANO".equalsIgnoreCase(rolActor.trim())) {
+            return false;
+        }
+        String campo = campoModificado.toUpperCase().trim();
+        return campo.contains("LOGIN") || campo.contains("LOGOUT") || campo.contains("SESION") || campo.contains("SESIÓN");
     }
 }

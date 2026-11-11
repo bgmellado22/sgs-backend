@@ -4,6 +4,8 @@ import com.conectatech.sgs_backend.model.enums.RolUsuario;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 public class UsuarioResponseDTO {
@@ -16,4 +18,5 @@ public class UsuarioResponseDTO {
     private String email;
     private RolUsuario rol;
     private Boolean estado;
+    private LocalDateTime ultimoAcceso;
 }

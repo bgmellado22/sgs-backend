@@ -19,6 +19,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -101,19 +102,27 @@ public class ClaveUnicaService {
             }
         }
 
-        // Registrar auditoría de inicio de sesión exitoso por ClaveÚnica
-        try {
-            auditoriaService.registrarAuditoriaManual(
-                    usuario.getId(),
-                    usuario.getNombreCompleto(),
-                    usuario.getRol().name(),
-                    "LOGIN_CLAVEUNICA",
-                    null,
-                    "Exitoso",
-                    "Inicio de sesión exitoso mediante ClaveÚnica (RUN: " + usuario.getRun() + ") en canal " + request.getCanal()
-            );
-        } catch (Exception e) {
-            log.warn("No se pudo registrar la auditoría de login para {}: {}", usuario.getRun(), e.getMessage());
+        // Actualizar marca temporal de último acceso
+        usuario.setUltimoAcceso(LocalDateTime.now());
+        usuarioRepository.save(usuario);
+
+        // Registrar auditoría de inicio de sesión exitoso por ClaveÚnica.
+        // Se audita exclusivamente para roles operativos/administrativos (ADMINISTRADOR, OPERADOR, INSPECTOR),
+        // excluyendo al rol CIUDADANO para preservar el rendimiento y evitar polución de la bitácora.
+        if (usuario.getRol() != RolUsuario.CIUDADANO) {
+            try {
+                auditoriaService.registrarAuditoriaManual(
+                        usuario.getId(),
+                        usuario.getNombreCompleto(),
+                        usuario.getRol().name(),
+                        "LOGIN_CLAVEUNICA",
+                        null,
+                        "Exitoso",
+                        "Inicio de sesión exitoso mediante ClaveÚnica (RUN: " + usuario.getRun() + ") en canal " + request.getCanal()
+                );
+            } catch (Exception e) {
+                log.warn("No se pudo registrar la auditoría de login para {}: {}", usuario.getRun(), e.getMessage());
+            }
         }
 
         return generarRespuestaAuth(usuario);
@@ -289,6 +298,7 @@ public class ClaveUnicaService {
                 .rol(RolUsuario.CIUDADANO)
                 .estado(true)
                 .intentosFallidos(0)
+                .ultimoAcceso(LocalDateTime.now())
                 .build();
 
         usuarioRepository.save(nuevo);

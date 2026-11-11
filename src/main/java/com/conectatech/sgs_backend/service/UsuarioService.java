@@ -30,17 +30,7 @@ public class UsuarioService {
                 List<Usuario> usuarios = usuarioRepository.findAll();
 
                 return usuarios.stream()
-                                .map(usuario -> UsuarioResponseDTO.builder()
-                                                .id(usuario.getId())
-                                                .run(usuario.getRun())
-                                                .nombres(usuario.getNombres())
-                                                .primerApellido(usuario.getPrimerApellido())
-                                                .segundoApellido(usuario.getSegundoApellido())
-                                                .nombreCompleto(usuario.getNombreCompleto())
-                                                .email(usuario.getEmail())
-                                                .rol(usuario.getRol())
-                                                .estado(usuario.getEstado())
-                                                .build())
+                                .map(this::mapToDTO)
                                 .collect(Collectors.toList());
         }
 
@@ -79,17 +69,7 @@ public class UsuarioService {
                 auditoriaService.registrarAuditoria("USUARIO_MODIFICACION", valorAnt, valorNue,
                                 "Edición de usuario " + usuarioActualizado.getNombreCompleto());
 
-                return UsuarioResponseDTO.builder()
-                                .id(usuarioActualizado.getId())
-                                .run(usuarioActualizado.getRun())
-                                .nombres(usuarioActualizado.getNombres())
-                                .primerApellido(usuarioActualizado.getPrimerApellido())
-                                .segundoApellido(usuarioActualizado.getSegundoApellido())
-                                .nombreCompleto(usuarioActualizado.getNombreCompleto())
-                                .email(usuarioActualizado.getEmail())
-                                .rol(usuarioActualizado.getRol())
-                                .estado(usuarioActualizado.getEstado())
-                                .build();
+                return mapToDTO(usuarioActualizado);
         }
 
         // Actualizar mi propio perfil
@@ -127,17 +107,7 @@ public class UsuarioService {
 
                 Usuario usuarioActualizado = usuarioRepository.save(usuario);
 
-                return UsuarioResponseDTO.builder()
-                                .id(usuarioActualizado.getId())
-                                .run(usuarioActualizado.getRun())
-                                .nombres(usuarioActualizado.getNombres())
-                                .primerApellido(usuarioActualizado.getPrimerApellido())
-                                .segundoApellido(usuarioActualizado.getSegundoApellido())
-                                .nombreCompleto(usuarioActualizado.getNombreCompleto())
-                                .email(usuarioActualizado.getEmail())
-                                .rol(usuarioActualizado.getRol())
-                                .estado(usuarioActualizado.getEstado())
-                                .build();
+                return mapToDTO(usuarioActualizado);
         }
 
         // Cambiar estado del usuario
@@ -160,17 +130,7 @@ public class UsuarioService {
                                 "Usuario " + usuario.getNombreCompleto() + " fue " + estadoNuevo.toLowerCase()
                 );
 
-                return UsuarioResponseDTO.builder()
-                                .id(usuarioActualizado.getId())
-                                .run(usuarioActualizado.getRun())
-                                .nombres(usuarioActualizado.getNombres())
-                                .primerApellido(usuarioActualizado.getPrimerApellido())
-                                .segundoApellido(usuarioActualizado.getSegundoApellido())
-                                .nombreCompleto(usuarioActualizado.getNombreCompleto())
-                                .email(usuarioActualizado.getEmail())
-                                .rol(usuarioActualizado.getRol())
-                                .estado(usuarioActualizado.getEstado())
-                                .build();
+                return mapToDTO(usuarioActualizado);
         }
 
         // Obtener inspectores activos (para el mapa operativo)
@@ -178,17 +138,22 @@ public class UsuarioService {
                 List<Usuario> inspectores = usuarioRepository.findByRolAndEstado(RolUsuario.INSPECTOR, true);
 
                 return inspectores.stream()
-                                .map(inspector -> UsuarioResponseDTO.builder()
-                                                .id(inspector.getId())
-                                                .run(inspector.getRun())
-                                                .nombres(inspector.getNombres())
-                                                .primerApellido(inspector.getPrimerApellido())
-                                                .segundoApellido(inspector.getSegundoApellido())
-                                                .nombreCompleto(inspector.getNombreCompleto())
-                                                .email(inspector.getEmail())
-                                                .rol(inspector.getRol())
-                                                .estado(inspector.getEstado())
-                                                .build())
+                                .map(this::mapToDTO)
                                 .collect(Collectors.toList());
+        }
+
+        private UsuarioResponseDTO mapToDTO(Usuario usuario) {
+                return UsuarioResponseDTO.builder()
+                                .id(usuario.getId())
+                                .run(usuario.getRun())
+                                .nombres(usuario.getNombres())
+                                .primerApellido(usuario.getPrimerApellido())
+                                .segundoApellido(usuario.getSegundoApellido())
+                                .nombreCompleto(usuario.getNombreCompleto())
+                                .email(usuario.getEmail())
+                                .rol(usuario.getRol())
+                                .estado(usuario.getEstado())
+                                .ultimoAcceso(usuario.getUltimoAcceso())
+                                .build();
         }
 }

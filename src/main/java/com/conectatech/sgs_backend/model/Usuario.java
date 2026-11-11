@@ -53,6 +53,9 @@ public class Usuario implements UserDetails {
     @Field("bloqueado_hasta")
     private LocalDateTime bloqueadoHasta;
 
+    @Field("ultimo_acceso")
+    private LocalDateTime ultimoAcceso;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + rol.name()));

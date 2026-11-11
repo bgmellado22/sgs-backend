@@ -129,25 +129,31 @@ public class AuthService {
                                         "Credenciales incorrectas. Intentos restantes: " + restantes);
                 }
 
+                // Actualizar último acceso e inicializar contadores de seguridad
+                user.setUltimoAcceso(LocalDateTime.now());
                 if (user.getIntentosFallidos() != null && user.getIntentosFallidos() > 0) {
                         user.setIntentosFallidos(0);
                         user.setBloqueadoHasta(null);
-                        usuarioRepository.save(user);
                 }
+                usuarioRepository.save(user);
 
-                // Registro forense en bitácora de inicio de sesión exitoso
-                try {
-                        auditoriaService.registrarAuditoriaManual(
-                                        user.getId(),
-                                        user.getNombreCompleto(),
-                                        user.getRol().name(),
-                                        "USUARIO_LOGIN",
-                                        "Inactiva",
-                                        "Sesión Iniciada",
-                                        "Inicio de sesión exitoso mediante correo electrónico (" + user.getEmail() + ")"
-                        );
-                } catch (Exception e) {
-                        // Resiliente: no interrumpir el flujo de autenticación ante contingencias de bitácora
+                // Registro forense en bitácora de inicio de sesión exitoso.
+                // Exclusivo para roles con privilegios operativos (ADMINISTRADOR, OPERADOR, INSPECTOR),
+                // previniendo la sobrecarga de la bitácora con accesos de ciudadanos.
+                if (user.getRol() != RolUsuario.CIUDADANO) {
+                        try {
+                                auditoriaService.registrarAuditoriaManual(
+                                                user.getId(),
+                                                user.getNombreCompleto(),
+                                                user.getRol().name(),
+                                                "USUARIO_LOGIN",
+                                                "Inactiva",
+                                                "Sesión Iniciada",
+                                                "Inicio de sesión exitoso mediante correo electrónico (" + user.getEmail() + ")"
+                                );
+                        } catch (Exception e) {
+                                // Resiliente: no interrumpir el flujo de autenticación ante contingencias de bitácora
+                        }
                 }
 
                 var jwtToken = jwtUtil.generateToken(user);
@@ -160,7 +166,8 @@ public class AuthService {
         public void logout() {
                 try {
                         Usuario actor = auditoriaService.getUsuarioActual();
-                        if (actor != null) {
+                        // Solo se audita el cierre de sesión para roles con responsabilidades operativas
+                        if (actor != null && actor.getRol() != RolUsuario.CIUDADANO) {
                                 auditoriaService.registrarAuditoriaManual(
                                                 actor.getId(),
                                                 actor.getNombreCompleto(),
