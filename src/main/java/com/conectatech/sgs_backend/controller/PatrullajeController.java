@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/patrullajes")
@@ -60,6 +61,15 @@ public class PatrullajeController {
             @RequestPart("datos") @Valid CierrePatrullajeDTO datos,
             @RequestPart(value = "evidencia", required = false) MultipartFile evidencia) {
         return ResponseEntity.ok(patrullajeService.cerrarPatrullaje(id, datos, evidencia));
+    }
+
+    @PatchMapping("/{id}/cancelar")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<PatrullajeDTO> cancelarPatrullaje(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String motivo = body != null ? body.get("motivo") : null;
+        return ResponseEntity.ok(patrullajeService.cancelarPatrullaje(id, motivo));
     }
 
     @GetMapping("/{id}/evidencia")

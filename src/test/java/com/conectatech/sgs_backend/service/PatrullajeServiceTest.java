@@ -227,5 +227,47 @@ public class PatrullajeServiceTest {
         verify(gridFsTemplate).delete(any(Query.class));
         verify(patrullajeRepository).save(argThat(p -> Boolean.TRUE.equals(p.getEvidenciaDepurada())));
     }
+
+    @Test
+    @DisplayName("Debe cancelar un patrullaje activo exitosamente, auditar, notificar WS y enviar Push")
+    void cancelarPatrullaje_Exitoso() {
+        Patrullaje activo = Patrullaje.builder()
+                .id("pat-canc-1")
+                .codigoCorrelativo("PAT-999")
+                .estado(EstadoPatrullaje.EN_PROCESO)
+                .inspectorId("insp-123")
+                .sector("Playa Chica")
+                .build();
+
+        when(patrullajeRepository.findById("pat-canc-1")).thenReturn(Optional.of(activo));
+        when(patrullajeRepository.save(any(Patrullaje.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioRepository.findById("insp-123")).thenReturn(Optional.of(inspectorMock));
+
+        PatrullajeDTO resultado = patrullajeService.cancelarPatrullaje("pat-canc-1", "Cambio de cuadrante prioritario");
+
+        assertNotNull(resultado);
+        assertEquals(EstadoPatrullaje.CANCELADO, resultado.getEstado());
+        assertEquals("Cambio de cuadrante prioritario", resultado.getObservacionesCierre());
+        verify(auditoriaService).registrarAuditoria(
+                eq("pat-canc-1"), eq("PAT-999"), eq("ESTADO"), eq("EN_PROCESO"), eq("CANCELADO"), contains("Cambio de cuadrante")
+        );
+        verify(messagingTemplate).convertAndSend(eq("/topic/patrullajes"), any(Object.class));
+        verify(fcmService).enviarNotificacionPush(eq("fcm-token-test-12345"), contains("Cancelado"), anyString(), anyMap());
+    }
+
+    @Test
+    @DisplayName("Debe lanzar excepción al intentar cancelar un patrullaje ya cerrado")
+    void cancelarPatrullaje_YaCerrado_LanzaExcepcion() {
+        Patrullaje cerrado = Patrullaje.builder()
+                .id("pat-cerrado")
+                .estado(EstadoPatrullaje.CERRADO)
+                .build();
+
+        when(patrullajeRepository.findById("pat-cerrado")).thenReturn(Optional.of(cerrado));
+
+        assertThrows(ResponseStatusException.class, () ->
+                patrullajeService.cancelarPatrullaje("pat-cerrado", "motivo")
+        );
+    }
 }
 

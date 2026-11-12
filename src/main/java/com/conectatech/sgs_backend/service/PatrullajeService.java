@@ -249,6 +249,61 @@ public class PatrullajeService {
     }
 
     /**
+     * Cancela un patrullaje preventivo activo desde la central de despacho.
+     */
+    public PatrullajeDTO cancelarPatrullaje(String id, String motivo) {
+        Patrullaje patrullaje = patrullajeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+
+        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede cancelar un patrullaje que ya está " + patrullaje.getEstado());
+        }
+
+        EstadoPatrullaje estadoAnterior = patrullaje.getEstado();
+        patrullaje.setEstado(EstadoPatrullaje.CANCELADO);
+        patrullaje.setFechaCierre(LocalDateTime.now());
+        if (motivo != null && !motivo.isBlank()) {
+            patrullaje.setObservacionesCierre(motivo.trim());
+        }
+
+        Patrullaje cancelado = patrullajeRepository.save(patrullaje);
+
+        // Registro de auditoría
+        auditoriaService.registrarAuditoria(
+                cancelado.getId(),
+                cancelado.getCodigoCorrelativo(),
+                "ESTADO",
+                estadoAnterior.name(),
+                EstadoPatrullaje.CANCELADO.name(),
+                "Patrullaje preventivo cancelado desde central táctica" + (motivo != null && !motivo.isBlank() ? ": " + motivo : "")
+        );
+
+        PatrullajeDTO responseDto = mapToDTO(cancelado);
+
+        // Notificar desmontaje visual a la Web
+        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("CANCELADO", responseDto, LocalDateTime.now()));
+
+        // Notificación Push al inspector asignado
+        if (cancelado.getInspectorId() != null) {
+            Usuario inspector = usuarioRepository.findById(cancelado.getInspectorId()).orElse(null);
+            if (inspector != null && inspector.getFcmToken() != null && !inspector.getFcmToken().isBlank()) {
+                Map<String, String> data = new HashMap<>();
+                data.put("tipo", "CANCELACION_PATRULLAJE");
+                data.put("patrullajeId", cancelado.getId());
+                data.put("codigoCorrelativo", cancelado.getCodigoCorrelativo());
+                fcmService.enviarNotificacionPush(
+                        inspector.getFcmToken(),
+                        "❌ Patrullaje Cancelado",
+                        "El patrullaje " + cancelado.getCodigoCorrelativo() + " ha sido cancelado por la central.",
+                        data
+                );
+            }
+        }
+
+        return responseDto;
+    }
+
+    /**
      * Descarga de recurso fotográfico desde GridFS.
      */
     public Resource descargarEvidencia(String id) {
