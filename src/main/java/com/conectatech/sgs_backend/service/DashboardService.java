@@ -94,15 +94,19 @@ public class DashboardService {
     }
 
     /**
-     * Una sola consulta con $facet sobre los incidentes activos.
+     * Consulta agregada con $facet.
+     * Para estados y categorías se consideran únicamente los incidentes activos.
+     * Para semanas, días y horas (volumen operativo y analítica semanal), se incluyen
+     * todas las denuncias ingresadas en el periodo, incluso si fueron eliminadas (inactivas).
      */
     private Document ejecutarAgregacion(Date desde, Date desdeAnterior) {
         Document fechaHoraLocal = new Document("date", "$fecha_creacion").append("timezone", ZONA_HORARIA);
         Document enSemanaActual = new Document("$match", new Document("fecha_creacion", new Document("$gte", desde)));
+        Document soloActivos = new Document("$match", new Document("activo", true));
 
         Document facet = new Document()
-                .append("estados", List.of(agruparPor("$estado")))
-                .append("categorias", List.of(agruparPor("$categoria")))
+                .append("estados", List.of(soloActivos, agruparPor("$estado")))
+                .append("categorias", List.of(soloActivos, agruparPor("$categoria")))
                 .append("semanas", List.of(
                         new Document("$match", new Document("fecha_creacion", new Document("$gte", desdeAnterior))),
                         agruparPor(new Document("$cond", Arrays.asList(
@@ -120,9 +124,7 @@ public class DashboardService {
                                         .append("prioridad", "$prioridad"))
                                 .append("cantidad", new Document("$sum", 1)))));
 
-        List<Document> pipeline = List.of(
-                new Document("$match", new Document("activo", true)),
-                new Document("$facet", facet));
+        List<Document> pipeline = List.of(new Document("$facet", facet));
 
         Document resultado = mongoTemplate.getCollection("incidentes").aggregate(pipeline).first();
         return resultado != null ? resultado : new Document();

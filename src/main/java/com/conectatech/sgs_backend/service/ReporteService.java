@@ -477,13 +477,13 @@ public class ReporteService {
         if ("Resuelto".equalsIgnoreCase(inc.getEstado()) || "Cerrado".equalsIgnoreCase(inc.getEstado())) {
             if (inc.getTiempoResolucionMinutos() != null) {
                 long meta = inc.getTiempoRespuestaMinutosObjetivo() != null ? inc.getTiempoRespuestaMinutosObjetivo() : 2880L;
-                return inc.getTiempoResolucionMinutos() <= meta ? "Cumplido" : "Fuera plazo";
+                return inc.getTiempoResolucionMinutos() <= meta ? "Cumplido a tiempo" : "Resuelto fuera de plazo";
             }
             return "Resuelto";
         }
         if (inc.getFechaVencimientoTiempoRespuesta() != null && LocalDateTime.now().isAfter(inc.getFechaVencimientoTiempoRespuesta())) {
-            return "Vencido";
+            return "Vencido (pendiente)";
         }
-        return "En curso";
+        return "En curso (en plazo)";
     }
 }
