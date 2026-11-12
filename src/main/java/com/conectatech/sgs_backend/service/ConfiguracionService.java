@@ -161,13 +161,16 @@ public class ConfiguracionService {
         Usuario admin = auditoriaService.getUsuarioActual();
 
         String etiquetaTipo = ETIQUETAS_AUDITORIA.get(tipoNormalizado);
+        String nombreOpcion = guardado.getEtiqueta() != null && !guardado.getEtiqueta().isBlank()
+                ? guardado.getEtiqueta()
+                : guardado.getValor();
         String mensaje = String.format(
                 "El Administrador %s ha creado el nuevo %s: %s",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 etiquetaTipo,
-                guardado.getValor());
+                nombreOpcion);
 
-        auditoriaService.registrarAuditoria("CATALOGO_CREACION", null, guardado.getValor(), mensaje);
+        auditoriaService.registrarAuditoria("CATALOGO_CREACION", null, nombreOpcion, mensaje);
 
         return guardado;
     }
@@ -236,16 +239,19 @@ public class ConfiguracionService {
         if (estadoAnterior != guardado.isActivo()) {
             String accion = guardado.isActivo() ? "activado" : "desactivado";
             String tipoAccion = guardado.isActivo() ? "CATALOGO_ACTIVACION" : "CATALOGO_DESACTIVACION";
+            String nombreOpcion = guardado.getEtiqueta() != null && !guardado.getEtiqueta().isBlank()
+                    ? guardado.getEtiqueta()
+                    : guardado.getValor();
             String mensajeEstado = String.format(
                     "El Administrador %s ha %s el %s: %s",
                     nombreAdmin,
                     accion,
                     etiquetaTipo,
-                    guardado.getValor());
+                    nombreOpcion);
             auditoriaService.registrarAuditoria(
                     tipoAccion,
-                    guardado.getValor() + " (" + (estadoAnterior ? "Activo" : "Inactivo") + ")",
-                    guardado.getValor() + " (" + (guardado.isActivo() ? "Activo" : "Inactivo") + ")",
+                    nombreOpcion + " (" + (estadoAnterior ? "Activo" : "Inactivo") + ")",
+                    nombreOpcion + " (" + (guardado.isActivo() ? "Activo" : "Inactivo") + ")",
                     mensajeEstado);
         }
 
@@ -313,12 +319,15 @@ public class ConfiguracionService {
         Usuario admin = auditoriaService.getUsuarioActual();
 
         String etiquetaTipo = ETIQUETAS_AUDITORIA.getOrDefault(existente.getTipo(), existente.getTipo());
+        String nombreOpcion = existente.getEtiqueta() != null && !existente.getEtiqueta().isBlank()
+                ? existente.getEtiqueta()
+                : existente.getValor();
         String mensaje = String.format(
                 "El Administrador %s ha eliminado el %s: %s",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 etiquetaTipo,
-                existente.getValor());
+                nombreOpcion);
 
-        auditoriaService.registrarAuditoria("CATALOGO_ELIMINACION", existente.getValor(), "ELIMINADO", mensaje);
+        auditoriaService.registrarAuditoria("CATALOGO_ELIMINACION", nombreOpcion, "ELIMINADO", mensaje);
     }
 }

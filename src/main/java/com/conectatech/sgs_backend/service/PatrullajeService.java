@@ -92,7 +92,7 @@ public class PatrullajeService {
                 guardado.getCodigoCorrelativo(),
                 "ESTADO",
                 null,
-                EstadoPatrullaje.EN_PROCESO.name(),
+                formatEstado(EstadoPatrullaje.EN_PROCESO),
                 "Patrullaje preventivo despachado a " + guardado.getInspectorNombre() + " en " + guardado.getSector()
         );
 
@@ -164,8 +164,8 @@ public class PatrullajeService {
                 actualizado.getId(),
                 actualizado.getCodigoCorrelativo(),
                 "ESTADO",
-                estadoAnterior.name(),
-                EstadoPatrullaje.EN_SITIO.name(),
+                formatEstado(estadoAnterior),
+                formatEstado(EstadoPatrullaje.EN_SITIO),
                 "Inspector arribó al sector de cobertura: " + actualizado.getSector()
         );
 
@@ -234,9 +234,9 @@ public class PatrullajeService {
                 cerrado.getId(),
                 cerrado.getCodigoCorrelativo(),
                 "ESTADO",
-                estadoAnterior.name(),
-                EstadoPatrullaje.CERRADO.name(),
-                "Patrullaje preventivo finalizado. Resultado: " + cerrado.getResultadoProcedimiento() +
+                formatEstado(estadoAnterior),
+                formatEstado(EstadoPatrullaje.CERRADO),
+                "Patrullaje preventivo finalizado. Resultado: " + (cerrado.getResultadoProcedimiento() != null ? formatResultado(cerrado.getResultadoProcedimiento()) : "Sin especificar") +
                         (cerrado.getObservacionesCierre() != null ? " - " + cerrado.getObservacionesCierre() : "")
         );
 
@@ -273,8 +273,8 @@ public class PatrullajeService {
                 cancelado.getId(),
                 cancelado.getCodigoCorrelativo(),
                 "ESTADO",
-                estadoAnterior.name(),
-                EstadoPatrullaje.CANCELADO.name(),
+                formatEstado(estadoAnterior),
+                formatEstado(EstadoPatrullaje.CANCELADO),
                 "Patrullaje preventivo cancelado desde central táctica" + (motivo != null && !motivo.isBlank() ? ": " + motivo : "")
         );
 
@@ -392,6 +392,27 @@ public class PatrullajeService {
                 .evidenciaDepurada(p.getEvidenciaDepurada())
                 .activo(p.getActivo())
                 .build();
+    }
+
+    private String formatEstado(EstadoPatrullaje estado) {
+        if (estado == null) return null;
+        switch (estado) {
+            case EN_PROCESO: return "En Proceso";
+            case EN_SITIO: return "En Sitio";
+            case CERRADO: return "Cerrado";
+            case CANCELADO: return "Cancelado";
+            default: return estado.name();
+        }
+    }
+
+    private String formatResultado(ResultadoProcedimiento resultado) {
+        if (resultado == null) return "";
+        switch (resultado) {
+            case SIN_NOVEDAD: return "Sin Novedad";
+            case FISCALIZACION_REALIZADA: return "Fiscalización Realizada";
+            case DERIVACION_CARABINEROS: return "Derivación a Carabineros";
+            default: return resultado.name();
+        }
     }
 }
 
