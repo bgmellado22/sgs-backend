@@ -64,7 +64,28 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
             criterios.add(Criteria.where("tipo").is(tipo));
         }
         if (estado != null && !estado.isBlank()) {
-            criterios.add(Criteria.where("estado").is(estado));
+            String est = estado.trim();
+            if (est.equalsIgnoreCase("Cerrado / Derivado")
+                    || est.equalsIgnoreCase("Cerrado/Derivado")
+                    || est.equalsIgnoreCase("Cerrado,Derivado")
+                    || est.equalsIgnoreCase("Cerrado")) {
+                criterios.add(Criteria.where("estado").in("Cerrado", "Resuelto", "Derivado"));
+            } else if (est.contains(",") || est.contains("/")) {
+                String[] partes = est.split("[,/]");
+                List<String> listaEstados = new ArrayList<>();
+                for (String p : partes) {
+                    String clean = p.trim();
+                    if (!clean.isEmpty()) {
+                        listaEstados.add(clean);
+                        if (clean.equalsIgnoreCase("Cerrado")) {
+                            listaEstados.add("Resuelto");
+                        }
+                    }
+                }
+                criterios.add(Criteria.where("estado").in(listaEstados));
+            } else {
+                criterios.add(Criteria.where("estado").is(est));
+            }
         }
         if (prioridad != null && !prioridad.isBlank()) {
             criterios.add(Criteria.where("prioridad").is(prioridad));
