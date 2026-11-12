@@ -3,6 +3,7 @@ package com.conectatech.sgs_backend.service;
 import com.conectatech.sgs_backend.dto.ReporteKpiDTO;
 import com.conectatech.sgs_backend.model.Incidente;
 import com.conectatech.sgs_backend.repository.IncidenteRepository;
+import com.conectatech.sgs_backend.util.DuracionUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -199,7 +200,7 @@ public class ReporteService {
             String[] columnas = {
                     "Código", "Fecha Registro", "Categoría", "Tipo", "Prioridad",
                     "Estado", "Dirección / Sector", "Origen Denuncia", "Fecha Cierre",
-                    "Resolución (min)", "Estado Tiempo de Respuesta"
+                    "Tiempo de Resolución", "Estado Tiempo de Respuesta"
             };
 
             for (int i = 0; i < columnas.length; i++) {
@@ -227,8 +228,8 @@ public class ReporteService {
                 crearCelda(row, 8, inc.getFechaCierre() != null ? inc.getFechaCierre().format(FORMATO_FECHA_HORA) : "-",
                         dataStyle);
                 crearCelda(row, 9,
-                        inc.getTiempoResolucionMinutos() != null ? String.valueOf(inc.getTiempoResolucionMinutos())
-                                : "-",
+                        DuracionUtils.formatearTiempoResolucion(inc.getFechaCreacion(), inc.getFechaCierre(),
+                                inc.getTiempoResolucionMinutos()),
                         dataStyle);
                 crearCelda(row, 10, evaluarEstadoTiempoRespuesta(inc), dataStyle);
             }
