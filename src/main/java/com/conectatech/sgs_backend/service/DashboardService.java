@@ -15,6 +15,7 @@ import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -42,11 +43,14 @@ public class DashboardService {
     private final SectorService sectorService;
 
     public DashboardEstadisticasDTO obtenerEstadisticas() {
-        // Ventana actual: hoy + 6 días previos. Ventana anterior: los 7 días antes de esa.
+        // Semana calendario real (Lunes a Domingo):
+        // Semana actual: desde el lunes de esta semana a las 00:00:00.
+        // Semana anterior: semana calendario previa completa (lunes anterior 00:00 a domingo previo 23:59).
         LocalDate hoy = LocalDate.now(ZONA);
-        LocalDate inicioSemana = hoy.minusDays(DIAS_VENTANA - 1);
+        LocalDate inicioSemana = hoy.with(DayOfWeek.MONDAY);
+        LocalDate inicioSemanaAnterior = inicioSemana.minusWeeks(1);
         Date desde = toDate(inicioSemana);
-        Date desdeAnterior = toDate(inicioSemana.minusDays(DIAS_VENTANA));
+        Date desdeAnterior = toDate(inicioSemanaAnterior);
 
         Document resultado = ejecutarAgregacion(desde, desdeAnterior);
 
@@ -94,19 +98,16 @@ public class DashboardService {
     }
 
     /**
-     * Consulta agregada con $facet.
-     * Para estados y categorías se consideran únicamente los incidentes activos.
-     * Para semanas, días y horas (volumen operativo y analítica semanal), se incluyen
-     * todas las denuncias ingresadas en el periodo, incluso si fueron eliminadas (inactivas).
+     * Consulta agregada con $facet sobre incidentes activos.
+     * Mantiene consistencia total con el módulo de Reportes y la bandeja de Denuncias.
      */
     private Document ejecutarAgregacion(Date desde, Date desdeAnterior) {
         Document fechaHoraLocal = new Document("date", "$fecha_creacion").append("timezone", ZONA_HORARIA);
         Document enSemanaActual = new Document("$match", new Document("fecha_creacion", new Document("$gte", desde)));
-        Document soloActivos = new Document("$match", new Document("activo", true));
 
         Document facet = new Document()
-                .append("estados", List.of(soloActivos, agruparPor("$estado")))
-                .append("categorias", List.of(soloActivos, agruparPor("$categoria")))
+                .append("estados", List.of(agruparPor("$estado")))
+                .append("categorias", List.of(agruparPor("$categoria")))
                 .append("semanas", List.of(
                         new Document("$match", new Document("fecha_creacion", new Document("$gte", desdeAnterior))),
                         agruparPor(new Document("$cond", Arrays.asList(
@@ -124,7 +125,9 @@ public class DashboardService {
                                         .append("prioridad", "$prioridad"))
                                 .append("cantidad", new Document("$sum", 1)))));
 
-        List<Document> pipeline = List.of(new Document("$facet", facet));
+        List<Document> pipeline = List.of(
+                new Document("$match", new Document("activo", true)),
+                new Document("$facet", facet));
 
         Document resultado = mongoTemplate.getCollection("incidentes").aggregate(pipeline).first();
         return resultado != null ? resultado : new Document();
