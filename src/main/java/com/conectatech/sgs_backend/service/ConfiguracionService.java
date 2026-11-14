@@ -92,10 +92,17 @@ public class ConfiguracionService {
     }
 
     /**
-     * Elimina un parámetro del sistema por su ID.
-     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     * Elimina un parámetro del sistema por su ID (compatibilidad).
      */
     public void eliminarParametro(String id) {
+        eliminarParametro(id, null);
+    }
+
+    /**
+     * Elimina un parámetro del sistema por su ID con justificación.
+     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     */
+    public void eliminarParametro(String id, String motivo) {
         ParametroSistema parametro = parametroSistemaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Parámetro no encontrado con ID: " + id));
@@ -105,11 +112,16 @@ public class ConfiguracionService {
         // ── Gatillo Inalterable: Registro Forense ──
         Usuario admin = auditoriaService.getUsuarioActual();
 
+        String sufijoMotivo = (motivo != null && !motivo.isBlank())
+                ? ". Motivo: " + motivo.trim()
+                : "";
+
         String mensaje = String.format(
-                "El Administrador %s ha eliminado el Parámetro de Tiempo de Respuesta: %s (Valor anterior: %s)",
+                "El Administrador %s ha eliminado el Parámetro de Tiempo de Respuesta: %s (Valor anterior: %s)%s",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 parametro.getClave(),
-                parametro.getValor());
+                parametro.getValor(),
+                sufijoMotivo);
 
         auditoriaService.registrarAuditoria("TIEMPO_RESPUESTA_ELIMINACION", parametro.getValor(), "ELIMINADO", mensaje);
     }
@@ -234,6 +246,9 @@ public class ConfiguracionService {
         String nombreAdmin = admin != null ? admin.getNombreCompleto() : "Sistema";
         String etiquetaTipo = ETIQUETAS_AUDITORIA.getOrDefault(existente.getTipo(), existente.getTipo());
         String visualNuevo = describirVisual(guardado);
+        String sufijoMotivo = (catalogoActualizado.getMotivo() != null && !catalogoActualizado.getMotivo().isBlank())
+                ? ". Motivo: " + catalogoActualizado.getMotivo().trim()
+                : "";
 
         // 1. Registrar cambio de estado (Activación/Desactivación)
         if (estadoAnterior != guardado.isActivo()) {
@@ -243,11 +258,12 @@ public class ConfiguracionService {
                     ? guardado.getEtiqueta()
                     : guardado.getValor();
             String mensajeEstado = String.format(
-                    "El Administrador %s ha %s el %s: %s",
+                    "El Administrador %s ha %s el %s: %s%s",
                     nombreAdmin,
                     accion,
                     etiquetaTipo,
-                    nombreOpcion);
+                    nombreOpcion,
+                    sufijoMotivo);
             auditoriaService.registrarAuditoria(
                     tipoAccion,
                     nombreOpcion + " (" + (estadoAnterior ? "Activo" : "Inactivo") + ")",
@@ -272,13 +288,14 @@ public class ConfiguracionService {
             }
 
             String mensajeMod = String.format(
-                    "El Administrador %s ha modificado el %s %s (Etiqueta: %s -> %s%s)",
+                    "El Administrador %s ha modificado el %s %s (Etiqueta: %s -> %s%s)%s",
                     nombreAdmin,
                     etiquetaTipo,
                     guardado.getValor(),
                     etiquetaAnterior,
                     guardado.getEtiqueta(),
-                    difVisual);
+                    difVisual,
+                    sufijoMotivo);
 
             String valorAnt = guardado.getValor() + " (" + etiquetaAnterior
                     + (!visualAnterior.isEmpty() ? ", " + visualAnterior : "") + ")";
@@ -299,11 +316,19 @@ public class ConfiguracionService {
     }
 
     /**
-     * Elimina un catálogo por su ID.
-     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     * Elimina un catálogo por su ID (compatibilidad).
      */
     @CacheEvict(value = "catalogos", allEntries = true)
     public void eliminarCatalogo(String id) {
+        eliminarCatalogo(id, null);
+    }
+
+    /**
+     * Elimina un catálogo por su ID con justificación forense.
+     * Gatillo Inalterable: registra automáticamente en la bitácora.
+     */
+    @CacheEvict(value = "catalogos", allEntries = true)
+    public void eliminarCatalogo(String id, String motivo) {
         Catalogo existente = catalogoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Catálogo no encontrado con ID: " + id));
@@ -322,11 +347,15 @@ public class ConfiguracionService {
         String nombreOpcion = existente.getEtiqueta() != null && !existente.getEtiqueta().isBlank()
                 ? existente.getEtiqueta()
                 : existente.getValor();
+        String sufijoMotivo = (motivo != null && !motivo.isBlank())
+                ? ". Motivo: " + motivo.trim()
+                : "";
         String mensaje = String.format(
-                "El Administrador %s ha eliminado el %s: %s",
+                "El Administrador %s ha eliminado el %s: %s%s",
                 admin != null ? admin.getNombreCompleto() : "Sistema",
                 etiquetaTipo,
-                nombreOpcion);
+                nombreOpcion,
+                sufijoMotivo);
 
         auditoriaService.registrarAuditoria("CATALOGO_ELIMINACION", nombreOpcion, "ELIMINADO", mensaje);
     }

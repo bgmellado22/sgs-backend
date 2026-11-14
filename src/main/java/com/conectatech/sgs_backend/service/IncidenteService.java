@@ -684,12 +684,15 @@ public class IncidenteService {
 
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
+                String sufijoMotivo = (dto.getMotivo() != null && !dto.getMotivo().isBlank())
+                                ? ". Motivo: " + dto.getMotivo().trim()
+                                : "";
 
                 // Auditar y Actualizar Prioridad
                 if (dto.getPrioridad() != null && !dto.getPrioridad().equals(incidente.getPrioridad())) {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Prioridad",
                                         incidente.getPrioridad(), dto.getPrioridad(),
-                                        "Edición de prioridad por parte de " + actor.getNombreCompleto());
+                                        "Edición de prioridad por parte de " + actor.getNombreCompleto() + sufijoMotivo);
                         incidente.setPrioridad(dto.getPrioridad());
 
                         // Recalcular Tiempo de Respuesta si cambia la prioridad
@@ -700,7 +703,7 @@ public class IncidenteService {
                 if (dto.getOrigen() != null && !dto.getOrigen().equals(incidente.getOrigen())) {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Origen",
                                         incidente.getOrigen(), dto.getOrigen(),
-                                        "Edición de origen por parte de " + actor.getNombreCompleto());
+                                        "Edición de origen por parte de " + actor.getNombreCompleto() + sufijoMotivo);
                         incidente.setOrigen(dto.getOrigen());
                 }
 
@@ -708,7 +711,7 @@ public class IncidenteService {
                 if (dto.getCategoria() != null && !dto.getCategoria().equals(incidente.getCategoria())) {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Categoría",
                                         incidente.getCategoria(), dto.getCategoria(),
-                                        "Edición de categoría por parte de " + actor.getNombreCompleto());
+                                        "Edición de categoría por parte de " + actor.getNombreCompleto() + sufijoMotivo);
                         incidente.setCategoria(dto.getCategoria());
                 }
 
@@ -716,7 +719,7 @@ public class IncidenteService {
                 if (dto.getTipo() != null && !dto.getTipo().equals(incidente.getTipo())) {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Tipo",
                                         incidente.getTipo(), dto.getTipo(),
-                                        "Edición de tipo por parte de " + actor.getNombreCompleto());
+                                        "Edición de tipo por parte de " + actor.getNombreCompleto() + sufijoMotivo);
                         incidente.setTipo(dto.getTipo());
                 }
 
@@ -724,7 +727,7 @@ public class IncidenteService {
                 if (dto.getDescripcion() != null && !dto.getDescripcion().equals(incidente.getDescripcion())) {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Descripción",
                                         incidente.getDescripcion(), dto.getDescripcion(),
-                                        "Edición de descripción por parte de " + actor.getNombreCompleto());
+                                        "Edición de descripción por parte de " + actor.getNombreCompleto() + sufijoMotivo);
                         incidente.setDescripcion(dto.getDescripcion());
                 }
 
@@ -736,7 +739,7 @@ public class IncidenteService {
                 if (dto.getDireccionTexto() != null && !dto.getDireccionTexto().equals(incidente.getDireccionTexto())) {
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Dirección",
                                         incidente.getDireccionTexto(), dto.getDireccionTexto(),
-                                        "Edición de dirección por parte de " + actor.getNombreCompleto());
+                                        "Edición de dirección por parte de " + actor.getNombreCompleto() + sufijoMotivo);
                         incidente.setDireccionTexto(dto.getDireccionTexto());
                 }
 
@@ -760,7 +763,7 @@ public class IncidenteService {
 
                         registrarAuditoria(incidente.getId(), incidente.getCodigoCorrelativo(), actor, "Estado",
                                         estadoAnterior, nuevoEstado,
-                                        "Edición de estado administrativo por " + actor.getNombreCompleto());
+                                        "Edición de estado administrativo por " + actor.getNombreCompleto() + sufijoMotivo);
                 }
 
                 // Actualizar datos del denunciante
@@ -809,8 +812,13 @@ public class IncidenteService {
                                 textoBusqueda, modulo, tipoOperacion, rolActor, fechaInicio, fechaFin, pageable);
         }
 
-        // Método para eliminar un incidente
+        // Método para eliminar un incidente (compatibilidad)
         public void eliminarIncidente(String id) {
+                eliminarIncidente(id, null);
+        }
+
+        // Método para eliminar un incidente con justificación forense en bitácora
+        public void eliminarIncidente(String id, String motivo) {
                 Incidente incidenteExistente = incidenteRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND, "Incidente no encontrado con ID: " + id));
@@ -823,11 +831,14 @@ public class IncidenteService {
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 Usuario actor = (Usuario) auth.getPrincipal();
 
+                String detalleComentario = (motivo != null && !motivo.isBlank())
+                                ? motivo.trim()
+                                : ("Denuncia eliminada por " + actor.getNombreCompleto());
+
                 registrarAuditoria(incidenteExistente.getId(), incidenteExistente.getCodigoCorrelativo(), actor,
                                 "Eliminación",
                                 "Activo", "Eliminado",
-                                "Denuncia eliminada por "
-                                                + actor.getNombreCompleto());
+                                detalleComentario);
         }
 
         // Método para reactivar un incidente inactivo (exclusivo Administrador)

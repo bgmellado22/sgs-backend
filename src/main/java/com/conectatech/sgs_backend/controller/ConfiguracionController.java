@@ -51,13 +51,29 @@ public class ConfiguracionController {
 
     /**
      * DELETE /api/v1/configuracion/parametros/{id}
-     * Elimina un parámetro del sistema.
+     * Elimina un parámetro del sistema con justificación forense.
      * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @DeleteMapping("/parametros/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<Void> eliminarParametro(@PathVariable String id) {
-        configuracionService.eliminarParametro(id);
+    public ResponseEntity<Void> eliminarParametro(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(value = "motivo", required = false) String motivoParam) {
+
+        String motivo = motivoParam;
+        if ((motivo == null || motivo.isBlank()) && body != null && body.containsKey("motivo")) {
+            Object val = body.get("motivo");
+            if (val != null) {
+                motivo = val.toString();
+            }
+        }
+
+        if (motivo != null && !motivo.isBlank()) {
+            configuracionService.eliminarParametro(id, motivo);
+        } else {
+            configuracionService.eliminarParametro(id);
+        }
         return ResponseEntity.noContent().build();
     }
 
@@ -107,13 +123,29 @@ public class ConfiguracionController {
 
     /**
      * DELETE /api/v1/configuracion/catalogos/{id}
-     * Elimina un valor de catálogo.
+     * Elimina un valor de catálogo con justificación forense.
      * Seguridad: Exclusivo ADMINISTRADOR.
      */
     @DeleteMapping("/catalogos/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<Void> eliminarCatalogo(@PathVariable String id) {
-        configuracionService.eliminarCatalogo(id);
+    public ResponseEntity<Void> eliminarCatalogo(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(value = "motivo", required = false) String motivoParam) {
+
+        String motivo = motivoParam;
+        if ((motivo == null || motivo.isBlank()) && body != null && body.containsKey("motivo")) {
+            Object val = body.get("motivo");
+            if (val != null) {
+                motivo = val.toString();
+            }
+        }
+
+        if (motivo != null && !motivo.isBlank()) {
+            configuracionService.eliminarCatalogo(id, motivo);
+        } else {
+            configuracionService.eliminarCatalogo(id);
+        }
         return ResponseEntity.noContent().build();
     }
 }

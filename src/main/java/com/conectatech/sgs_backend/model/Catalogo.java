@@ -44,6 +44,10 @@ public class Catalogo {
 
     private boolean activo;
 
+    // Justificación forense no persistida en la entidad de catálogo, capturada para bitácora
+    @org.springframework.data.annotation.Transient
+    private String motivo;
+
     public Catalogo() {
         this.activo = true;
     }

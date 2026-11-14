@@ -66,8 +66,10 @@ public class UsuarioService {
                 // Registro de auditoría unificado
                 String valorAnt = String.format("Rol: %s, Email: %s", rolAnterior, emailAnterior);
                 String valorNue = String.format("Rol: %s, Email: %s", usuarioActualizado.getRol(), usuarioActualizado.getEmail());
-                auditoriaService.registrarAuditoria("USUARIO_MODIFICACION", valorAnt, valorNue,
-                                "Edición de usuario " + usuarioActualizado.getNombreCompleto());
+                String comentario = (dto.getMotivo() != null && !dto.getMotivo().isBlank())
+                                ? "Edición de usuario " + usuarioActualizado.getNombreCompleto() + ". Motivo: " + dto.getMotivo().trim()
+                                : "Edición de usuario " + usuarioActualizado.getNombreCompleto();
+                auditoriaService.registrarAuditoria("USUARIO_MODIFICACION", valorAnt, valorNue, comentario);
 
                 return mapToDTO(usuarioActualizado);
         }
@@ -110,8 +112,13 @@ public class UsuarioService {
                 return mapToDTO(usuarioActualizado);
         }
 
-        // Cambiar estado del usuario
+        // Cambiar estado del usuario (compatibilidad)
         public UsuarioResponseDTO cambiarEstadoUsuario(String id) {
+                return cambiarEstadoUsuario(id, null);
+        }
+
+        // Cambiar estado del usuario con justificación forense en bitácora
+        public UsuarioResponseDTO cambiarEstadoUsuario(String id, String motivo) {
                 Usuario usuario = usuarioRepository.findById(id)
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con ID: " + id));
 
@@ -123,11 +130,14 @@ public class UsuarioService {
                 Usuario usuarioActualizado = usuarioRepository.save(usuario);
 
                 // Registro en bitácora unificado
+                String sufijoMotivo = (motivo != null && !motivo.isBlank())
+                                ? ". Motivo: " + motivo.trim()
+                                : "";
                 auditoriaService.registrarAuditoria(
                                 "USUARIO_ESTADO",
                                 estadoAnterior,
                                 estadoNuevo,
-                                "Usuario " + usuario.getNombreCompleto() + " fue " + estadoNuevo.toLowerCase()
+                                "Usuario " + usuario.getNombreCompleto() + " fue " + estadoNuevo.toLowerCase() + sufijoMotivo
                 );
 
                 return mapToDTO(usuarioActualizado);

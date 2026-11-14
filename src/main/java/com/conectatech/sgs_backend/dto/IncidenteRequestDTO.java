@@ -46,4 +46,7 @@ public class IncidenteRequestDTO {
     @jakarta.validation.Valid
     private DenuncianteDTO denunciante;
     private Boolean esAnonimo;
+
+    @Size(max = 500, message = "El motivo de la modificación no puede superar los 500 caracteres")
+    private String motivo;
 }

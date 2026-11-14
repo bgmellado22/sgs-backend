@@ -215,6 +215,20 @@ public class IncidenteControllerTest {
                 .andExpect(jsonPath("$.message").value("Incidente no encontrado con ID: no-existe"));
     }
 
+    @Test
+    @DisplayName("DELETE /incidentes/{id} con motivo de justificación → 204 No Content")
+    public void testEliminarIncidente_ConMotivo_Retorna204() throws Exception {
+        org.mockito.Mockito.doNothing().when(incidenteService).eliminarIncidente("inc-123", "Denuncia duplicada");
+
+        mockMvc.perform(delete("/api/v1/incidentes/inc-123")
+                .param("motivo", "Denuncia duplicada")
+                .with(user("admin").roles("ADMINISTRADOR"))
+                .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        org.mockito.Mockito.verify(incidenteService).eliminarIncidente("inc-123", "Denuncia duplicada");
+    }
+
     // Tests PATCH /api/v1/incidentes/{id}/reactivar
 
     @Test

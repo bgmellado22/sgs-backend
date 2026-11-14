@@ -90,6 +90,7 @@ public class SectorController {
         }
 
         Boolean activo = payload.get("activo") != null ? Boolean.valueOf(payload.get("activo").toString()) : true;
+        String motivo = payload.get("motivo") != null ? payload.get("motivo").toString() : null;
 
         Sector datos = new Sector();
         if (nombre != null) {
@@ -100,7 +101,7 @@ public class SectorController {
         }
         datos.setActivo(activo);
 
-        return ResponseEntity.ok(sectorService.actualizarSector(id, datos));
+        return ResponseEntity.ok(sectorService.actualizarSector(id, datos, motivo));
     }
 }
 

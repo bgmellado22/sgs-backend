@@ -181,10 +181,26 @@ public class IncidenteController {
         return ResponseEntity.ok(editado);
     }
 
-    // Borrado Lógico
+    // Borrado Lógico con justificación forense en bitácora
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarIncidente(@PathVariable("id") String id) {
-        incidenteService.eliminarIncidente(id);
+    public ResponseEntity<Void> eliminarIncidente(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(value = "motivo", required = false) String motivoParam) {
+
+        String motivo = motivoParam;
+        if ((motivo == null || motivo.isBlank()) && body != null && body.containsKey("motivo")) {
+            Object val = body.get("motivo");
+            if (val != null) {
+                motivo = val.toString();
+            }
+        }
+
+        if (motivo != null && !motivo.isBlank()) {
+            incidenteService.eliminarIncidente(id, motivo);
+        } else {
+            incidenteService.eliminarIncidente(id);
+        }
         return ResponseEntity.noContent().build();
     }
 

@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class SectorService {
 
     public static final String SIN_UBICACION = "Sin ubicación";
@@ -25,6 +24,17 @@ public class SectorService {
     private static final Duration DURACION_CACHE = Duration.ofMinutes(5);
 
     private final SectorRepository sectorRepository;
+    private final AuditoriaService auditoriaService;
+
+    public SectorService(SectorRepository sectorRepository) {
+        this(sectorRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SectorService(SectorRepository sectorRepository, AuditoriaService auditoriaService) {
+        this.sectorRepository = sectorRepository;
+        this.auditoriaService = auditoriaService;
+    }
 
     private volatile List<Sector> cache;
     private volatile Instant cacheExpira = Instant.MIN;
@@ -52,9 +62,16 @@ public class SectorService {
     }
 
     public Sector actualizarSector(String id, Sector datos) {
+        return actualizarSector(id, datos, null);
+    }
+
+    public Sector actualizarSector(String id, Sector datos, String motivo) {
         Sector existente = sectorRepository.findById(id)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Sector no encontrado con ID: " + id));
+
+        boolean estadoAnterior = existente.isActivo();
+        String nombreAnterior = existente.getNombre();
 
         if (datos.getNombre() != null && !datos.getNombre().isBlank()) {
             existente.setNombre(datos.getNombre().trim());
@@ -66,6 +83,27 @@ public class SectorService {
 
         Sector guardado = sectorRepository.save(existente);
         invalidarCache();
+
+        if (auditoriaService != null) {
+            String sufijoMotivo = (motivo != null && !motivo.isBlank()) ? ". Motivo: " + motivo.trim() : "";
+            if (estadoAnterior != guardado.isActivo()) {
+                String tipoAccion = guardado.isActivo() ? "SECTOR_ACTIVACION" : "SECTOR_DESACTIVACION";
+                auditoriaService.registrarAuditoria(
+                        tipoAccion,
+                        nombreAnterior + " (" + (estadoAnterior ? "Activo" : "Inactivo") + ")",
+                        guardado.getNombre() + " (" + (guardado.isActivo() ? "Activo" : "Inactivo") + ")",
+                        "Sector " + guardado.getNombre() + " fue " + (guardado.isActivo() ? "activado" : "desactivado") + sufijoMotivo
+                );
+            } else if (!nombreAnterior.equals(guardado.getNombre()) || datos.getCentro() != null) {
+                auditoriaService.registrarAuditoria(
+                        "SECTOR_MODIFICACION",
+                        nombreAnterior,
+                        guardado.getNombre(),
+                        "Modificación de sector comunal " + guardado.getNombre() + sufijoMotivo
+                );
+            }
+        }
+
         return guardado;
     }
 

@@ -99,7 +99,7 @@ public class PatrullajeServiceTest {
         assertEquals("Carlos Mendoza", resultado.getInspectorNombre());
         assertEquals(45, resultado.getTiempoEstimadoMinutos());
 
-        verify(auditoriaService).registrarAuditoria(eq("pat-generated-id"), anyString(), eq("ESTADO"), isNull(), eq("EN_PROCESO"), anyString());
+        verify(auditoriaService).registrarAuditoria(eq("pat-generated-id"), anyString(), eq("ESTADO"), isNull(), eq("En Proceso"), anyString());
         verify(messagingTemplate).convertAndSend(eq("/topic/patrullajes"), any(Object.class));
         verify(fcmService).enviarNotificacionPush(eq("fcm-token-test-12345"), anyString(), anyString(), anyMap());
     }
@@ -123,7 +123,7 @@ public class PatrullajeServiceTest {
         assertEquals(EstadoPatrullaje.EN_SITIO, resultado.getEstado());
         assertNotNull(resultado.getFechaLlegadaSitio());
 
-        verify(auditoriaService).registrarAuditoria(eq("pat-1"), eq("PAT-1001"), eq("ESTADO"), eq("EN_PROCESO"), eq("EN_SITIO"), anyString());
+        verify(auditoriaService).registrarAuditoria(eq("pat-1"), eq("PAT-1001"), eq("ESTADO"), eq("En Proceso"), eq("En Sitio"), anyString());
         verify(messagingTemplate).convertAndSend(eq("/topic/patrullajes"), any(Object.class));
     }
 
@@ -178,7 +178,7 @@ public class PatrullajeServiceTest {
 
         // Verifica que se haya programado la fecha de depuración
         verify(patrullajeRepository).save(argThat(p -> p.getFechaDepuracionEvidencia() != null));
-        verify(auditoriaService).registrarAuditoria(eq("pat-sitio"), eq("PAT-2002"), eq("ESTADO"), eq("EN_SITIO"), eq("CERRADO"), anyString());
+        verify(auditoriaService).registrarAuditoria(eq("pat-sitio"), eq("PAT-2002"), eq("ESTADO"), eq("En Sitio"), eq("Cerrado"), anyString());
         verify(messagingTemplate).convertAndSend(eq("/topic/patrullajes"), any(Object.class));
     }
 
@@ -249,7 +249,7 @@ public class PatrullajeServiceTest {
         assertEquals(EstadoPatrullaje.CANCELADO, resultado.getEstado());
         assertEquals("Cambio de cuadrante prioritario", resultado.getObservacionesCierre());
         verify(auditoriaService).registrarAuditoria(
-                eq("pat-canc-1"), eq("PAT-999"), eq("ESTADO"), eq("EN_PROCESO"), eq("CANCELADO"), contains("Cambio de cuadrante")
+                eq("pat-canc-1"), eq("PAT-999"), eq("ESTADO"), eq("En Proceso"), eq("Cancelado"), contains("Cambio de cuadrante")
         );
         verify(messagingTemplate).convertAndSend(eq("/topic/patrullajes"), any(Object.class));
         verify(fcmService).enviarNotificacionPush(eq("fcm-token-test-12345"), contains("Cancelado"), anyString(), anyMap());

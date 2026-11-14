@@ -25,4 +25,7 @@ public class UsuarioUpdateDTO {
     private String email;
 
     private RolUsuario rol;
+
+    @Size(max = 500, message = "El motivo no puede superar los 500 caracteres.")
+    private String motivo;
 }

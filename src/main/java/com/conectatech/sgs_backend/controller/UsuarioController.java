@@ -43,8 +43,20 @@ public class UsuarioController {
 
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<UsuarioResponseDTO> cambiarEstadoUsuario(@PathVariable String id) {
-        UsuarioResponseDTO usuarioActualizado = usuarioService.cambiarEstadoUsuario(id);
+    public ResponseEntity<UsuarioResponseDTO> cambiarEstadoUsuario(
+            @PathVariable String id,
+            @RequestBody(required = false) java.util.Map<String, Object> body,
+            @RequestParam(value = "motivo", required = false) String motivoParam) {
+
+        String motivo = motivoParam;
+        if ((motivo == null || motivo.isBlank()) && body != null && body.containsKey("motivo")) {
+            Object val = body.get("motivo");
+            if (val != null) {
+                motivo = val.toString();
+            }
+        }
+
+        UsuarioResponseDTO usuarioActualizado = usuarioService.cambiarEstadoUsuario(id, motivo);
         return ResponseEntity.ok(usuarioActualizado);
     }
 
