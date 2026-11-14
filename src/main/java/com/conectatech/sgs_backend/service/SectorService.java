@@ -37,6 +37,43 @@ public class SectorService {
         return cache;
     }
 
+    public List<Sector> obtenerTodos() {
+        return sectorRepository.findAll();
+    }
+
+    public Sector crearSector(Sector sector) {
+        if (sector.getNombre() == null || sector.getNombre().isBlank()) {
+            throw new IllegalArgumentException("El nombre del sector es obligatorio.");
+        }
+        sector.setActivo(true);
+        Sector guardado = sectorRepository.save(sector);
+        invalidarCache();
+        return guardado;
+    }
+
+    public Sector actualizarSector(String id, Sector datos) {
+        Sector existente = sectorRepository.findById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Sector no encontrado con ID: " + id));
+
+        if (datos.getNombre() != null && !datos.getNombre().isBlank()) {
+            existente.setNombre(datos.getNombre().trim());
+        }
+        if (datos.getCentro() != null) {
+            existente.setCentro(datos.getCentro());
+        }
+        existente.setActivo(datos.isActivo());
+
+        Sector guardado = sectorRepository.save(existente);
+        invalidarCache();
+        return guardado;
+    }
+
+    public void invalidarCache() {
+        cache = null;
+        cacheExpira = Instant.MIN;
+    }
+
     /**
      * Igual que {@link #resolverSector(Double, Double, List)}, usando los sectores activos cacheados.
      */
