@@ -74,6 +74,7 @@ public class AuthService {
                                 .rol(rol)
                                 .estado(true)
                                 .intentosFallidos(0)
+                                .fechaRegistro(LocalDateTime.now())
                                 .build();
 
                 usuarioRepository.save(user);

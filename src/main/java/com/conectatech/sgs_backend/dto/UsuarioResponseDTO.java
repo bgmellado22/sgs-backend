@@ -19,4 +19,5 @@ public class UsuarioResponseDTO {
     private RolUsuario rol;
     private Boolean estado;
     private LocalDateTime ultimoAcceso;
+    private LocalDateTime fechaRegistro;
 }

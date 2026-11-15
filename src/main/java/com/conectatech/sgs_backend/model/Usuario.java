@@ -56,6 +56,10 @@ public class Usuario implements UserDetails {
     @Field("ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
+    @Field("fecha_registro")
+    @Builder.Default
+    private LocalDateTime fechaRegistro = LocalDateTime.now();
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + rol.name()));

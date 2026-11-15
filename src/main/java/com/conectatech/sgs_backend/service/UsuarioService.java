@@ -153,6 +153,15 @@ public class UsuarioService {
         }
 
         private UsuarioResponseDTO mapToDTO(Usuario usuario) {
+                java.time.LocalDateTime fecha = usuario.getFechaRegistro();
+                if (fecha == null && usuario.getId() != null && org.bson.types.ObjectId.isValid(usuario.getId())) {
+                        try {
+                                org.bson.types.ObjectId objectId = new org.bson.types.ObjectId(usuario.getId());
+                                fecha = java.time.LocalDateTime.ofInstant(objectId.getDate().toInstant(), java.time.ZoneId.systemDefault());
+                        } catch (Exception ignored) {
+                        }
+                }
+
                 return UsuarioResponseDTO.builder()
                                 .id(usuario.getId())
                                 .run(usuario.getRun())
@@ -164,6 +173,7 @@ public class UsuarioService {
                                 .rol(usuario.getRol())
                                 .estado(usuario.getEstado())
                                 .ultimoAcceso(usuario.getUltimoAcceso())
+                                .fechaRegistro(fecha)
                                 .build();
         }
 }
