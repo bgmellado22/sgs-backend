@@ -356,6 +356,8 @@ public class IncidenteService {
 
                 String estadoAnterior = incidente.getEstado() != null ? incidente.getEstado() : "Pendiente";
                 boolean esOS14 = "OS14".equalsIgnoreCase(dto.getTipoPatrullaje());
+                boolean esReasignacion = incidente.isDerivado() && "MUNICIPALIDAD".equalsIgnoreCase(incidente.getDerivacionEntidad());
+                String inspectorAnterior = incidente.getDerivacionInspectorNombre();
 
                 incidente.setDerivado(true);
                 incidente.setDerivacionEntidad("MUNICIPALIDAD");
@@ -376,19 +378,34 @@ public class IncidenteService {
                 Incidente guardado = incidenteRepository.save(incidente);
 
                 String modalidadTexto = esOS14 ? "Patrullaje Mixto (Convenio OS-14)" : "Patrullaje Municipal Ordinario";
-                String comentarioBitacora = String.format(
-                                "Despacho municipal asignado a %s. Modalidad: %s.%s",
-                                (dto.getInspectorNombre() != null && !dto.getInspectorNombre().isBlank()
-                                                ? dto.getInspectorNombre()
-                                                : "Dotación en Terreno"),
-                                modalidadTexto,
-                                (dto.getInstrucciones() != null && !dto.getInstrucciones().isBlank()
-                                                ? " Instrucciones: " + dto.getInstrucciones().trim()
-                                                : "")
-                );
+                String comentarioBitacora;
+                if (esReasignacion) {
+                        comentarioBitacora = String.format(
+                                        "Reasignación municipal de %s a %s. Modalidad: %s.%s",
+                                        (inspectorAnterior != null && !inspectorAnterior.isBlank() ? inspectorAnterior : "Patrulla"),
+                                        dto.getInspectorNombre(),
+                                        modalidadTexto,
+                                        (dto.getInstrucciones() != null && !dto.getInstrucciones().isBlank()
+                                                        ? " Instrucciones: " + dto.getInstrucciones().trim()
+                                                        : "")
+                        );
+                } else {
+                        comentarioBitacora = String.format(
+                                        "Despacho municipal asignado a %s. Modalidad: %s.%s",
+                                        (dto.getInspectorNombre() != null && !dto.getInspectorNombre().isBlank()
+                                                        ? dto.getInspectorNombre()
+                                                        : "Dotación en Terreno"),
+                                        modalidadTexto,
+                                        (dto.getInstrucciones() != null && !dto.getInstrucciones().isBlank()
+                                                        ? " Instrucciones: " + dto.getInstrucciones().trim()
+                                                        : "")
+                        );
+                }
 
                 registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor,
-                                "Despacho Municipal", estadoAnterior, "En proceso",
+                                esReasignacion ? "Reasignación Municipal" : "Despacho Municipal",
+                                esReasignacion ? inspectorAnterior : estadoAnterior,
+                                esReasignacion ? dto.getInspectorNombre() : "En proceso",
                                 comentarioBitacora);
 
                 Notificacion alertaDespacho = Notificacion.builder()

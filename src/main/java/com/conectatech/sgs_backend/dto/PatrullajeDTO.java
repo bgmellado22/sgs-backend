@@ -32,7 +32,7 @@ public class PatrullajeDTO {
     private LocalDateTime fechaLlegadaSitio;
     private LocalDateTime fechaCierre;
     private Long duracionEfectivaMinutos;
-    private ResultadoProcedimiento resultadoProcedimiento;
+    private String resultadoProcedimiento;
     private String observacionesCierre;
     private String evidenciaFotoId;
     private String evidenciaUrl;

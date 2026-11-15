@@ -1,10 +1,12 @@
 package com.conectatech.sgs_backend.service;
 
 import com.conectatech.sgs_backend.dto.*;
+import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.model.Patrullaje;
 import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.model.enums.EstadoPatrullaje;
 import com.conectatech.sgs_backend.model.enums.ResultadoProcedimiento;
+import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.PatrullajeRepository;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import com.mongodb.client.gridfs.model.GridFSFile;
@@ -42,6 +44,7 @@ public class PatrullajeService {
     private final PatrullajeRepository patrullajeRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuditoriaService auditoriaService;
+    private final BitacoraProcedimientoRepository bitacoraRepository;
     private final GridFsTemplate gridFsTemplate;
     private final SimpMessagingTemplate messagingTemplate;
     private final FcmService fcmService;
@@ -178,6 +181,105 @@ public class PatrullajeService {
     }
 
     /**
+     * Revierte el arribo a terreno ('EN_SITIO' -> 'EN_PROCESO') en caso de marcaje accidental o repliegue temporal.
+     */
+    public PatrullajeDTO revertirEnSitio(String id) {
+        Patrullaje patrullaje = patrullajeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+
+        if (patrullaje.getEstado() != EstadoPatrullaje.EN_SITIO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se puede revertir un patrullaje que se encuentre En Sitio.");
+        }
+
+        EstadoPatrullaje estadoAnterior = patrullaje.getEstado();
+        patrullaje.setEstado(EstadoPatrullaje.EN_PROCESO);
+        patrullaje.setFechaLlegadaSitio(null);
+
+        Patrullaje actualizado = patrullajeRepository.save(patrullaje);
+
+        // Registro de auditoría
+        auditoriaService.registrarAuditoria(
+                actualizado.getId(),
+                actualizado.getCodigoCorrelativo(),
+                "ESTADO",
+                formatEstado(estadoAnterior),
+                formatEstado(EstadoPatrullaje.EN_PROCESO),
+                "Marcaje en sitio revertido por operador central (Móvil en desplazamiento nuevamente)"
+        );
+
+        PatrullajeDTO responseDto = mapToDTO(actualizado);
+
+        // Notificar cambio por WebSocket
+        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("EN_PROCESO", responseDto, LocalDateTime.now()));
+
+        return responseDto;
+    }
+
+    /**
+     * Obtiene el historial de bitácora y trazabilidad forense de un patrullaje.
+     */
+    public List<BitacoraProcedimiento> obtenerBitacora(String id) {
+        return bitacoraRepository.findByIncidenteIdOrderByFechaModificacionDesc(id);
+    }
+
+    /**
+     * Reasigna un patrullaje preventivo activo a un nuevo inspector en terreno.
+     */
+    public PatrullajeDTO reasignarInspector(String id, ReasignarInspectorDTO dto) {
+        Patrullaje patrullaje = patrullajeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+
+        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede reasignar un patrullaje finalizado o cancelado.");
+        }
+
+        Usuario nuevoInspector = usuarioRepository.findById(dto.getNuevoInspectorId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inspector no encontrado con ID: " + dto.getNuevoInspectorId()));
+
+        String inspectorAnterior = patrullaje.getInspectorNombre() != null ? patrullaje.getInspectorNombre() : "Sin asignar";
+        String nuevoNombre = nuevoInspector.getNombreCompleto();
+
+        patrullaje.setInspectorId(nuevoInspector.getId());
+        patrullaje.setInspectorNombre(nuevoNombre);
+
+        Patrullaje guardado = patrullajeRepository.save(patrullaje);
+
+        // Registro de auditoría
+        String detalle = "Reasignación táctica de patrullaje preventivo de " + inspectorAnterior + " a " + nuevoNombre
+                + (dto.getMotivo() != null && !dto.getMotivo().isBlank() ? " | Motivo: " + dto.getMotivo().trim() : "");
+        auditoriaService.registrarAuditoria(
+                guardado.getId(),
+                guardado.getCodigoCorrelativo(),
+                "INSPECTOR",
+                inspectorAnterior,
+                nuevoNombre,
+                detalle
+        );
+
+        PatrullajeDTO responseDto = mapToDTO(guardado);
+
+        // Notificar por WebSocket al mapa y bandejas
+        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("REASIGNADO", responseDto, LocalDateTime.now()));
+
+        // Notificación Push FCM al nuevo inspector
+        if (nuevoInspector.getFcmToken() != null && !nuevoInspector.getFcmToken().isBlank()) {
+            Map<String, String> data = new HashMap<>();
+            data.put("tipo", "REASIGNACION_PATRULLAJE");
+            data.put("patrullajeId", guardado.getId());
+            data.put("codigoCorrelativo", guardado.getCodigoCorrelativo());
+            data.put("sector", guardado.getSector());
+            fcmService.enviarNotificacionPush(
+                    nuevoInspector.getFcmToken(),
+                    "🚨 Patrullaje Reasignado",
+                    "Se te ha asignado la ronda preventiva " + guardado.getCodigoCorrelativo() + " en " + guardado.getSector(),
+                    data
+            );
+        }
+
+        return responseDto;
+    }
+
+    /**
      * Cierre formal del servicio de patrullaje con resultado, observaciones y foto opcional en GridFS.
      */
     public PatrullajeDTO cerrarPatrullaje(String id, CierrePatrullajeDTO datos, MultipartFile foto) {
@@ -223,7 +325,9 @@ public class PatrullajeService {
         }
 
         // Si el resultado fue 'SIN_NOVEDAD', se programa la depuración a 90 días
-        if (datos.getResultadoProcedimiento() == ResultadoProcedimiento.SIN_NOVEDAD && patrullaje.getEvidenciaFotoId() != null) {
+        if (datos.getResultadoProcedimiento() != null &&
+                datos.getResultadoProcedimiento().toUpperCase().contains("SIN_NOVEDAD") &&
+                patrullaje.getEvidenciaFotoId() != null) {
             patrullaje.setFechaDepuracionEvidencia(LocalDateTime.now().plusDays(90));
         }
 
@@ -338,7 +442,7 @@ public class PatrullajeService {
         LocalDateTime ahora = LocalDateTime.now();
         List<Patrullaje> candidatos = patrullajeRepository
                 .findByResultadoProcedimientoAndEvidenciaFotoIdNotNullAndEvidenciaDepuradaFalseAndFechaDepuracionEvidenciaBefore(
-                        ResultadoProcedimiento.SIN_NOVEDAD, ahora
+                        "SIN_NOVEDAD", ahora
                 );
 
         int depurados = 0;
@@ -405,14 +509,12 @@ public class PatrullajeService {
         }
     }
 
-    private String formatResultado(ResultadoProcedimiento resultado) {
+    private String formatResultado(String resultado) {
         if (resultado == null) return "";
-        switch (resultado) {
-            case SIN_NOVEDAD: return "Sin Novedad";
-            case FISCALIZACION_REALIZADA: return "Fiscalización Realizada";
-            case DERIVACION_CARABINEROS: return "Derivación a Carabineros";
-            default: return resultado.name();
-        }
+        if ("SIN_NOVEDAD".equalsIgnoreCase(resultado)) return "Sin Novedad";
+        if ("FISCALIZACION_REALIZADA".equalsIgnoreCase(resultado)) return "Fiscalización Realizada";
+        if ("DERIVACION_CARABINEROS".equalsIgnoreCase(resultado)) return "Derivación a Carabineros";
+        return resultado;
     }
 }
 

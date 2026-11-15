@@ -22,7 +22,7 @@ public interface PatrullajeRepository extends MongoRepository<Patrullaje, String
     long countByFechaCreacionBetween(LocalDateTime inicio, LocalDateTime fin);
 
     List<Patrullaje> findByResultadoProcedimientoAndEvidenciaFotoIdNotNullAndEvidenciaDepuradaFalseAndFechaDepuracionEvidenciaBefore(
-            ResultadoProcedimiento resultadoProcedimiento,
+            String resultadoProcedimiento,
             LocalDateTime fechaLimite
     );
 }

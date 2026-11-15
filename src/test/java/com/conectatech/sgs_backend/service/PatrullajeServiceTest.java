@@ -7,6 +7,7 @@ import com.conectatech.sgs_backend.model.Patrullaje;
 import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.model.enums.EstadoPatrullaje;
 import com.conectatech.sgs_backend.model.enums.ResultadoProcedimiento;
+import com.conectatech.sgs_backend.repository.BitacoraProcedimientoRepository;
 import com.conectatech.sgs_backend.repository.PatrullajeRepository;
 import com.conectatech.sgs_backend.repository.UsuarioRepository;
 import org.bson.types.ObjectId;
@@ -43,6 +44,9 @@ public class PatrullajeServiceTest {
 
     @Mock
     private AuditoriaService auditoriaService;
+
+    @Mock
+    private BitacoraProcedimientoRepository bitacoraRepository;
 
     @Mock
     private GridFsTemplate gridFsTemplate;
@@ -141,6 +145,30 @@ public class PatrullajeServiceTest {
     }
 
     @Test
+    @DisplayName("Debe revertir estado 'En Sitio' a 'En Proceso' exitosamente")
+    void revertirEnSitio_Exitoso() {
+        Patrullaje enSitio = Patrullaje.builder()
+                .id("pat-sitio")
+                .codigoCorrelativo("PAT-1002")
+                .estado(EstadoPatrullaje.EN_SITIO)
+                .fechaLlegadaSitio(LocalDateTime.now())
+                .sector("Playa Chica")
+                .build();
+
+        when(patrullajeRepository.findById("pat-sitio")).thenReturn(Optional.of(enSitio));
+        when(patrullajeRepository.save(any(Patrullaje.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PatrullajeDTO resultado = patrullajeService.revertirEnSitio("pat-sitio");
+
+        assertNotNull(resultado);
+        assertEquals(EstadoPatrullaje.EN_PROCESO, resultado.getEstado());
+        assertNull(resultado.getFechaLlegadaSitio());
+
+        verify(auditoriaService).registrarAuditoria(eq("pat-sitio"), eq("PAT-1002"), eq("ESTADO"), eq("En Sitio"), eq("En Proceso"), anyString());
+        verify(messagingTemplate).convertAndSend(eq("/topic/patrullajes"), any(Object.class));
+    }
+
+    @Test
     @DisplayName("Debe cerrar patrullaje con fotografía en GridFS y programar depuración a 90 días para 'Sin Novedad'")
     void cerrarPatrullaje_ExitosoConFoto_SinNovedad() {
         Patrullaje enSitio = Patrullaje.builder()
@@ -151,7 +179,7 @@ public class PatrullajeServiceTest {
                 .build();
 
         CierrePatrullajeDTO cierreDTO = CierrePatrullajeDTO.builder()
-                .resultadoProcedimiento(ResultadoProcedimiento.SIN_NOVEDAD)
+                .resultadoProcedimiento("SIN_NOVEDAD")
                 .observaciones("Ronda sin novedades en el cuadrante costero")
                 .build();
 

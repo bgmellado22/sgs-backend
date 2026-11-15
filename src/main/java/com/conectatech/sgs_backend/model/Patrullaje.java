@@ -82,7 +82,7 @@ public class Patrullaje {
     private Long duracionEfectivaMinutos;
 
     @Field("resultado_procedimiento")
-    private ResultadoProcedimiento resultadoProcedimiento;
+    private String resultadoProcedimiento;
 
     @Field("observaciones_cierre")
     private String observacionesCierre;

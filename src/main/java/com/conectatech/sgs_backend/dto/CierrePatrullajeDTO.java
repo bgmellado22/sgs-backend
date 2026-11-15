@@ -1,7 +1,6 @@
 package com.conectatech.sgs_backend.dto;
 
-import com.conectatech.sgs_backend.model.enums.ResultadoProcedimiento;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,8 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CierrePatrullajeDTO {
 
-    @NotNull(message = "El resultado del procedimiento es obligatorio")
-    private ResultadoProcedimiento resultadoProcedimiento;
+    @NotBlank(message = "El resultado del procedimiento es obligatorio")
+    private String resultadoProcedimiento;
 
     private String observaciones;
 }

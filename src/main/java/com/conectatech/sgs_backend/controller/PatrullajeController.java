@@ -3,7 +3,9 @@ package com.conectatech.sgs_backend.controller;
 import com.conectatech.sgs_backend.dto.CierrePatrullajeDTO;
 import com.conectatech.sgs_backend.dto.CrearPatrullajeDTO;
 import com.conectatech.sgs_backend.dto.PatrullajeDTO;
+import com.conectatech.sgs_backend.dto.ReasignarInspectorDTO;
 import com.conectatech.sgs_backend.dto.TelemetriaInspectorDTO;
+import com.conectatech.sgs_backend.model.BitacoraProcedimiento;
 import com.conectatech.sgs_backend.service.PatrullajeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +56,12 @@ public class PatrullajeController {
         return ResponseEntity.ok(patrullajeService.marcarEnSitio(id));
     }
 
+    @PatchMapping("/{id}/revertir-sitio")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<PatrullajeDTO> revertirEnSitio(@PathVariable String id) {
+        return ResponseEntity.ok(patrullajeService.revertirEnSitio(id));
+    }
+
     @PostMapping(value = "/{id}/cerrar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR', 'INSPECTOR')")
     public ResponseEntity<PatrullajeDTO> cerrarPatrullaje(
@@ -80,6 +88,20 @@ public class PatrullajeController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                 .contentType(MediaType.IMAGE_JPEG)
                 .body(resource);
+    }
+
+    @GetMapping("/{id}/bitacora")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR', 'INSPECTOR')")
+    public ResponseEntity<List<BitacoraProcedimiento>> obtenerBitacora(@PathVariable String id) {
+        return ResponseEntity.ok(patrullajeService.obtenerBitacora(id));
+    }
+
+    @PatchMapping("/{id}/reasignar")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<PatrullajeDTO> reasignarInspector(
+            @PathVariable String id,
+            @Valid @RequestBody ReasignarInspectorDTO dto) {
+        return ResponseEntity.ok(patrullajeService.reasignarInspector(id, dto));
     }
 
     @PostMapping("/telemetria")
