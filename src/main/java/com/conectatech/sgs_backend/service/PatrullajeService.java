@@ -59,11 +59,30 @@ public class PatrullajeService {
         // Validar y obtener inspector asignado
         String nombreInspector = dto.getInspectorNombre();
         String fcmToken = null;
-        if (dto.getInspectorId() != null) {
+        if (dto.getInspectorId() != null && !dto.getInspectorId().isBlank()) {
             Usuario inspector = usuarioRepository.findById(dto.getInspectorId()).orElse(null);
             if (inspector != null) {
                 nombreInspector = inspector.getNombreCompleto();
                 fcmToken = inspector.getFcmToken();
+            }
+
+            // Regla de Negocio: Un inspector no puede ser asignado a un nuevo patrullaje
+            // mientras tenga uno activo en proceso o en sitio
+            List<Patrullaje> activosInspector = patrullajeRepository.findByInspectorIdAndEstadoIn(
+                    dto.getInspectorId(),
+                    List.of(EstadoPatrullaje.EN_PROCESO, EstadoPatrullaje.EN_SITIO)).stream()
+                    .filter(p -> p.getActivo() == null || Boolean.TRUE.equals(p.getActivo()))
+                    .collect(Collectors.toList());
+
+            if (!activosInspector.isEmpty()) {
+                Patrullaje activo = activosInspector.get(0);
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        String.format(
+                                "El inspector %s ya se encuentra asignado al patrullaje preventivo activo %s en %s. Debe finalizar dicho servicio antes de asignarlo a una nueva ronda.",
+                                (nombreInspector != null ? nombreInspector : "seleccionado"),
+                                activo.getCodigoCorrelativo(),
+                                (activo.getSector() != null ? activo.getSector() : "terreno")));
             }
         }
 
@@ -96,13 +115,13 @@ public class PatrullajeService {
                 "ESTADO",
                 null,
                 formatEstado(EstadoPatrullaje.EN_PROCESO),
-                "Patrullaje preventivo despachado a " + guardado.getInspectorNombre() + " en " + guardado.getSector()
-        );
+                "Patrullaje preventivo despachado a " + guardado.getInspectorNombre() + " en " + guardado.getSector());
 
         PatrullajeDTO responseDto = mapToDTO(guardado);
 
         // Notificación en tiempo real por WebSocket
-        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("CREADO", responseDto, LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/patrullajes",
+                new EventoPatrullajeWS("CREADO", responseDto, LocalDateTime.now()));
 
         // Notificación Push de alta prioridad hacia el inspector asignado
         if (fcmToken != null && !fcmToken.isBlank()) {
@@ -118,22 +137,22 @@ public class PatrullajeService {
 
             fcmService.enviarNotificacionPush(
                     fcmToken,
-                    "🚨 Nuevo Patrullaje: " + guardado.getSector(),
+                    "Nuevo Patrullaje: " + guardado.getSector(),
                     guardado.getObjetivo(),
-                    data
-            );
+                    data);
         }
 
         return responseDto;
     }
 
     /**
-     * Lista todos los patrullajes preventivos actualmente en ronda activa (EN_PROCESO o EN_SITIO).
+     * Lista todos los patrullajes preventivos actualmente en ronda activa
+     * (EN_PROCESO o EN_SITIO).
      */
     public List<PatrullajeDTO> listarActivos() {
         return patrullajeRepository.findByActivoTrueAndEstadoInOrderByFechaCreacionDesc(
-                List.of(EstadoPatrullaje.EN_PROCESO, EstadoPatrullaje.EN_SITIO)
-        ).stream().map(this::mapToDTO).collect(Collectors.toList());
+                List.of(EstadoPatrullaje.EN_PROCESO, EstadoPatrullaje.EN_SITIO)).stream().map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -141,7 +160,8 @@ public class PatrullajeService {
      */
     public PatrullajeDTO obtenerPorId(String id) {
         Patrullaje patrullaje = patrullajeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Patrullaje no encontrado con ID: " + id));
         return mapToDTO(patrullaje);
     }
 
@@ -150,10 +170,13 @@ public class PatrullajeService {
      */
     public PatrullajeDTO marcarEnSitio(String id) {
         Patrullaje patrullaje = patrullajeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Patrullaje no encontrado con ID: " + id));
 
-        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede marcar en sitio un servicio que ya está " + patrullaje.getEstado());
+        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO
+                || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No se puede marcar en sitio un servicio que ya está " + patrullaje.getEstado());
         }
 
         EstadoPatrullaje estadoAnterior = patrullaje.getEstado();
@@ -169,26 +192,29 @@ public class PatrullajeService {
                 "ESTADO",
                 formatEstado(estadoAnterior),
                 formatEstado(EstadoPatrullaje.EN_SITIO),
-                "Inspector arribó al sector de cobertura: " + actualizado.getSector()
-        );
+                "Inspector arribó al sector de cobertura: " + actualizado.getSector());
 
         PatrullajeDTO responseDto = mapToDTO(actualizado);
 
         // Notificar cambio por WebSocket
-        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("EN_SITIO", responseDto, LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/patrullajes",
+                new EventoPatrullajeWS("EN_SITIO", responseDto, LocalDateTime.now()));
 
         return responseDto;
     }
 
     /**
-     * Revierte el arribo a terreno ('EN_SITIO' -> 'EN_PROCESO') en caso de marcaje accidental o repliegue temporal.
+     * Revierte el arribo a terreno ('EN_SITIO' -> 'EN_PROCESO') en caso de marcaje
+     * accidental o repliegue temporal.
      */
     public PatrullajeDTO revertirEnSitio(String id) {
         Patrullaje patrullaje = patrullajeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Patrullaje no encontrado con ID: " + id));
 
         if (patrullaje.getEstado() != EstadoPatrullaje.EN_SITIO) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se puede revertir un patrullaje que se encuentre En Sitio.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Solo se puede revertir un patrullaje que se encuentre En Sitio.");
         }
 
         EstadoPatrullaje estadoAnterior = patrullaje.getEstado();
@@ -204,13 +230,13 @@ public class PatrullajeService {
                 "ESTADO",
                 formatEstado(estadoAnterior),
                 formatEstado(EstadoPatrullaje.EN_PROCESO),
-                "Marcaje en sitio revertido por operador central (Móvil en desplazamiento nuevamente)"
-        );
+                "Marcaje en sitio revertido por operador central (Móvil en desplazamiento nuevamente)");
 
         PatrullajeDTO responseDto = mapToDTO(actualizado);
 
         // Notificar cambio por WebSocket
-        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("EN_PROCESO", responseDto, LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/patrullajes",
+                new EventoPatrullajeWS("EN_PROCESO", responseDto, LocalDateTime.now()));
 
         return responseDto;
     }
@@ -227,16 +253,50 @@ public class PatrullajeService {
      */
     public PatrullajeDTO reasignarInspector(String id, ReasignarInspectorDTO dto) {
         Patrullaje patrullaje = patrullajeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Patrullaje no encontrado con ID: " + id));
 
-        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede reasignar un patrullaje finalizado o cancelado.");
+        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO
+                || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No se puede reasignar un patrullaje finalizado o cancelado.");
+        }
+
+        if (patrullaje.getEstado() == EstadoPatrullaje.EN_SITIO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No se puede reasignar un patrullaje que se encuentra actualmente 'En Sitio'. Debe revertir el marcaje en sitio previamente.");
         }
 
         Usuario nuevoInspector = usuarioRepository.findById(dto.getNuevoInspectorId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inspector no encontrado con ID: " + dto.getNuevoInspectorId()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Inspector no encontrado con ID: " + dto.getNuevoInspectorId()));
 
-        String inspectorAnterior = patrullaje.getInspectorNombre() != null ? patrullaje.getInspectorNombre() : "Sin asignar";
+        if (nuevoInspector.getId().equals(patrullaje.getInspectorId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El inspector seleccionado ya está a cargo de este patrullaje.");
+        }
+
+        // Regla de Negocio: El nuevo inspector no puede estar asignado a otro
+        // patrullaje preventivo activo
+        List<Patrullaje> otrosActivos = patrullajeRepository.findByInspectorIdAndEstadoIn(
+                nuevoInspector.getId(),
+                List.of(EstadoPatrullaje.EN_PROCESO, EstadoPatrullaje.EN_SITIO)).stream()
+                .filter(p -> (p.getActivo() == null || Boolean.TRUE.equals(p.getActivo())) && !p.getId().equals(id))
+                .collect(Collectors.toList());
+
+        if (!otrosActivos.isEmpty()) {
+            Patrullaje activo = otrosActivos.get(0);
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    String.format(
+                            "El inspector %s ya se encuentra asignado al patrullaje preventivo activo %s en %s. Debe finalizar dicho servicio antes de reasignarlo a una nueva ronda.",
+                            nuevoInspector.getNombreCompleto(),
+                            activo.getCodigoCorrelativo(),
+                            (activo.getSector() != null ? activo.getSector() : "terreno")));
+        }
+
+        String inspectorAnterior = patrullaje.getInspectorNombre() != null ? patrullaje.getInspectorNombre()
+                : "Sin asignar";
         String nuevoNombre = nuevoInspector.getNombreCompleto();
 
         patrullaje.setInspectorId(nuevoInspector.getId());
@@ -253,13 +313,13 @@ public class PatrullajeService {
                 "INSPECTOR",
                 inspectorAnterior,
                 nuevoNombre,
-                detalle
-        );
+                detalle);
 
         PatrullajeDTO responseDto = mapToDTO(guardado);
 
         // Notificar por WebSocket al mapa y bandejas
-        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("REASIGNADO", responseDto, LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/patrullajes",
+                new EventoPatrullajeWS("REASIGNADO", responseDto, LocalDateTime.now()));
 
         // Notificación Push FCM al nuevo inspector
         if (nuevoInspector.getFcmToken() != null && !nuevoInspector.getFcmToken().isBlank()) {
@@ -271,20 +331,22 @@ public class PatrullajeService {
             fcmService.enviarNotificacionPush(
                     nuevoInspector.getFcmToken(),
                     "🚨 Patrullaje Reasignado",
-                    "Se te ha asignado la ronda preventiva " + guardado.getCodigoCorrelativo() + " en " + guardado.getSector(),
-                    data
-            );
+                    "Se te ha asignado la ronda preventiva " + guardado.getCodigoCorrelativo() + " en "
+                            + guardado.getSector(),
+                    data);
         }
 
         return responseDto;
     }
 
     /**
-     * Cierre formal del servicio de patrullaje con resultado, observaciones y foto opcional en GridFS.
+     * Cierre formal del servicio de patrullaje con resultado, observaciones y foto
+     * opcional en GridFS.
      */
     public PatrullajeDTO cerrarPatrullaje(String id, CierrePatrullajeDTO datos, MultipartFile foto) {
         Patrullaje patrullaje = patrullajeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Patrullaje no encontrado con ID: " + id));
 
         if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El patrullaje ya se encuentra cerrado.");
@@ -305,22 +367,24 @@ public class PatrullajeService {
         // Subida de fotografía opcional a GridFS
         if (foto != null && !foto.isEmpty()) {
             if (foto.getSize() > MAX_FILE_SIZE_BYTES) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fotografía excede el tamaño máximo permitido de 10MB.");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La fotografía excede el tamaño máximo permitido de 10MB.");
             }
             String contentType = foto.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo se permite adjuntar imágenes (JPG, PNG, WEBP).");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Solo se permite adjuntar imágenes (JPG, PNG, WEBP).");
             }
             try {
                 ObjectId fileId = gridFsTemplate.store(
                         foto.getInputStream(),
                         foto.getOriginalFilename(),
-                        contentType
-                );
+                        contentType);
                 patrullaje.setEvidenciaFotoId(fileId.toHexString());
             } catch (IOException e) {
                 log.error("Error al almacenar la evidencia de patrullaje en GridFS", e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al almacenar la evidencia fotográfica.");
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Error al almacenar la evidencia fotográfica.");
             }
         }
 
@@ -340,14 +404,18 @@ public class PatrullajeService {
                 "ESTADO",
                 formatEstado(estadoAnterior),
                 formatEstado(EstadoPatrullaje.CERRADO),
-                "Patrullaje preventivo finalizado. Resultado: " + (cerrado.getResultadoProcedimiento() != null ? formatResultado(cerrado.getResultadoProcedimiento()) : "Sin especificar") +
-                        (cerrado.getObservacionesCierre() != null ? " - " + cerrado.getObservacionesCierre() : "")
-        );
+                "Patrullaje preventivo finalizado. Resultado: "
+                        + (cerrado.getResultadoProcedimiento() != null
+                                ? formatResultado(cerrado.getResultadoProcedimiento())
+                                : "Sin especificar")
+                        +
+                        (cerrado.getObservacionesCierre() != null ? " - " + cerrado.getObservacionesCierre() : ""));
 
         PatrullajeDTO responseDto = mapToDTO(cerrado);
 
         // Notificar desmontaje visual a la Web
-        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("CERRADO", responseDto, LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/patrullajes",
+                new EventoPatrullajeWS("CERRADO", responseDto, LocalDateTime.now()));
 
         return responseDto;
     }
@@ -357,10 +425,13 @@ public class PatrullajeService {
      */
     public PatrullajeDTO cancelarPatrullaje(String id, String motivo) {
         Patrullaje patrullaje = patrullajeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patrullaje no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Patrullaje no encontrado con ID: " + id));
 
-        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede cancelar un patrullaje que ya está " + patrullaje.getEstado());
+        if (patrullaje.getEstado() == EstadoPatrullaje.CERRADO
+                || patrullaje.getEstado() == EstadoPatrullaje.CANCELADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No se puede cancelar un patrullaje que ya está " + patrullaje.getEstado());
         }
 
         EstadoPatrullaje estadoAnterior = patrullaje.getEstado();
@@ -379,13 +450,14 @@ public class PatrullajeService {
                 "ESTADO",
                 formatEstado(estadoAnterior),
                 formatEstado(EstadoPatrullaje.CANCELADO),
-                "Patrullaje preventivo cancelado desde central táctica" + (motivo != null && !motivo.isBlank() ? ": " + motivo : "")
-        );
+                "Patrullaje preventivo cancelado desde central táctica"
+                        + (motivo != null && !motivo.isBlank() ? ": " + motivo : ""));
 
         PatrullajeDTO responseDto = mapToDTO(cancelado);
 
         // Notificar desmontaje visual a la Web
-        messagingTemplate.convertAndSend("/topic/patrullajes", new EventoPatrullajeWS("CANCELADO", responseDto, LocalDateTime.now()));
+        messagingTemplate.convertAndSend("/topic/patrullajes",
+                new EventoPatrullajeWS("CANCELADO", responseDto, LocalDateTime.now()));
 
         // Notificación Push al inspector asignado
         if (cancelado.getInspectorId() != null) {
@@ -397,10 +469,9 @@ public class PatrullajeService {
                 data.put("codigoCorrelativo", cancelado.getCodigoCorrelativo());
                 fcmService.enviarNotificacionPush(
                         inspector.getFcmToken(),
-                        "❌ Patrullaje Cancelado",
+                        "Patrullaje Cancelado",
                         "El patrullaje " + cancelado.getCodigoCorrelativo() + " ha sido cancelado por la central.",
-                        data
-                );
+                        data);
             }
         }
 
@@ -416,7 +487,8 @@ public class PatrullajeService {
 
         String gridFsId = patrullaje.getEvidenciaFotoId();
         if (gridFsId == null || gridFsId.isBlank() || Boolean.TRUE.equals(patrullaje.getEvidenciaDepurada())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El patrullaje no cuenta con evidencia fotográfica activa o ya fue depurada.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "El patrullaje no cuenta con evidencia fotográfica activa o ya fue depurada.");
         }
 
         GridFSFile file;
@@ -434,7 +506,8 @@ public class PatrullajeService {
     }
 
     /**
-     * Tarea programada diaria para depuración de fotografías de 'Sin Novedad' tras 90 días.
+     * Tarea programada diaria para depuración de fotografías de 'Sin Novedad' tras
+     * 90 días.
      */
     @Scheduled(cron = "0 0 3 * * ?") // Ejecuta todos los días a las 3:00 AM
     public void ejecutarDepuracionEvidenciasSinNovedad() {
@@ -442,15 +515,15 @@ public class PatrullajeService {
         LocalDateTime ahora = LocalDateTime.now();
         List<Patrullaje> candidatos = patrullajeRepository
                 .findByResultadoProcedimientoAndEvidenciaFotoIdNotNullAndEvidenciaDepuradaFalseAndFechaDepuracionEvidenciaBefore(
-                        "SIN_NOVEDAD", ahora
-                );
+                        "SIN_NOVEDAD", ahora);
 
         int depurados = 0;
         for (Patrullaje p : candidatos) {
             try {
                 if (p.getEvidenciaFotoId() != null) {
                     if (ObjectId.isValid(p.getEvidenciaFotoId())) {
-                        gridFsTemplate.delete(Query.query(Criteria.where("_id").is(new ObjectId(p.getEvidenciaFotoId()))));
+                        gridFsTemplate
+                                .delete(Query.query(Criteria.where("_id").is(new ObjectId(p.getEvidenciaFotoId()))));
                     } else {
                         gridFsTemplate.delete(Query.query(Criteria.where("_id").is(p.getEvidenciaFotoId())));
                     }
@@ -459,7 +532,8 @@ public class PatrullajeService {
                     depurados++;
                 }
             } catch (Exception e) {
-                log.error("Error al depurar evidencia en GridFS para patrullaje {}: {}", p.getCodigoCorrelativo(), e.getMessage());
+                log.error("Error al depurar evidencia en GridFS para patrullaje {}: {}", p.getCodigoCorrelativo(),
+                        e.getMessage());
             }
         }
         log.info("Depuración de evidencias GridFS completada: {} archivos eliminados.", depurados);
@@ -499,22 +573,31 @@ public class PatrullajeService {
     }
 
     private String formatEstado(EstadoPatrullaje estado) {
-        if (estado == null) return null;
+        if (estado == null)
+            return null;
         switch (estado) {
-            case EN_PROCESO: return "En Proceso";
-            case EN_SITIO: return "En Sitio";
-            case CERRADO: return "Cerrado";
-            case CANCELADO: return "Cancelado";
-            default: return estado.name();
+            case EN_PROCESO:
+                return "En Proceso";
+            case EN_SITIO:
+                return "En Sitio";
+            case CERRADO:
+                return "Cerrado";
+            case CANCELADO:
+                return "Cancelado";
+            default:
+                return estado.name();
         }
     }
 
     private String formatResultado(String resultado) {
-        if (resultado == null) return "";
-        if ("SIN_NOVEDAD".equalsIgnoreCase(resultado)) return "Sin Novedad";
-        if ("FISCALIZACION_REALIZADA".equalsIgnoreCase(resultado)) return "Fiscalización Realizada";
-        if ("DERIVACION_CARABINEROS".equalsIgnoreCase(resultado)) return "Derivación a Carabineros";
+        if (resultado == null)
+            return "";
+        if ("SIN_NOVEDAD".equalsIgnoreCase(resultado))
+            return "Sin Novedad";
+        if ("FISCALIZACION_REALIZADA".equalsIgnoreCase(resultado))
+            return "Fiscalización Realizada";
+        if ("DERIVACION_CARABINEROS".equalsIgnoreCase(resultado))
+            return "Derivación a Carabineros";
         return resultado;
     }
 }
-
