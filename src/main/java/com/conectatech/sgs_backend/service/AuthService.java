@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -63,7 +64,9 @@ public class AuthService {
                                 ? nombres + " " + primerApellido
                                 : nombres + " " + primerApellido + " " + segundoApellido;
 
-                // Documento sin contraseña: La autenticación es 100% ClaveÚnica (OIDC)
+                // Documento con credencial aleatoria segura: La autenticación es 100% ClaveÚnica (OIDC).
+                // Se genera un hash BCrypt robusto e indescifrable para garantizar compatibilidad total
+                // con el contrato de Spring Security UserDetails y esquemas de base de datos.
                 var user = Usuario.builder()
                                 .run(request.getRun().trim())
                                 .nombres(nombres)
@@ -71,6 +74,7 @@ public class AuthService {
                                 .segundoApellido(segundoApellido)
                                 .nombreCompleto(nombreCompleto.trim())
                                 .email(emailNormalizado)
+                                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                                 .rol(rol)
                                 .estado(true)
                                 .intentosFallidos(0)
