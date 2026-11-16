@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -48,6 +50,7 @@ public class PatrullajeService {
     private final GridFsTemplate gridFsTemplate;
     private final SimpMessagingTemplate messagingTemplate;
     private final FcmService fcmService;
+    private final MongoTemplate mongoTemplate;
 
     /**
      * Registra un nuevo patrullaje preventivo despachado desde la central táctica.
@@ -152,6 +155,46 @@ public class PatrullajeService {
     public List<PatrullajeDTO> listarActivos() {
         return patrullajeRepository.findByActivoTrueAndEstadoInOrderByFechaCreacionDesc(
                 List.of(EstadoPatrullaje.EN_PROCESO, EstadoPatrullaje.EN_SITIO)).stream().map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Consulta el historial de patrullajes preventivos ejecutados con filtros
+     * multidimensionales (rango de fechas, sector, inspector, estado).
+     */
+    public List<PatrullajeDTO> listarHistorial(LocalDateTime fechaInicio, LocalDateTime fechaFin, String sector, String inspectorId, String estado) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("activo").is(true));
+
+        if (fechaInicio != null && fechaFin != null) {
+            query.addCriteria(Criteria.where("fechaCreacion").gte(fechaInicio).lte(fechaFin));
+        } else if (fechaInicio != null) {
+            query.addCriteria(Criteria.where("fechaCreacion").gte(fechaInicio));
+        } else if (fechaFin != null) {
+            query.addCriteria(Criteria.where("fechaCreacion").lte(fechaFin));
+        }
+
+        if (sector != null && !sector.isBlank() && !sector.equalsIgnoreCase("TODOS")) {
+            query.addCriteria(Criteria.where("sector").is(sector));
+        }
+
+        if (inspectorId != null && !inspectorId.isBlank()) {
+            query.addCriteria(Criteria.where("inspectorId").is(inspectorId));
+        }
+
+        if (estado != null && !estado.isBlank() && !estado.equalsIgnoreCase("TODOS")) {
+            try {
+                EstadoPatrullaje estadoEnum = EstadoPatrullaje.valueOf(estado.toUpperCase().trim());
+                query.addCriteria(Criteria.where("estado").is(estadoEnum));
+            } catch (IllegalArgumentException e) {
+                // Si no coincide con enum, no agrega filtro
+            }
+        }
+
+        query.with(Sort.by(Sort.Direction.DESC, "fechaCreacion"));
+
+        return mongoTemplate.find(query, Patrullaje.class).stream()
+                .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 

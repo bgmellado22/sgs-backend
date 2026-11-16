@@ -33,7 +33,8 @@ public class ConfiguracionService {
      */
     private static final Set<String> TIPOS_PERMITIDOS = Set.of(
             "ORIGEN", "TIPO_INCIDENTE", "UNIDAD_POLICIAL",
-            "RESULTADO_PROCEDIMIENTO", "CANAL_ENLACE", "TIPO_PATRULLAJE");
+            "RESULTADO_PROCEDIMIENTO", "CANAL_ENLACE", "TIPO_PATRULLAJE",
+            "RESULTADO_PATRULLAJE");
 
     /**
      * Etiquetas legibles para el mensaje de auditoría por tipo.
@@ -46,7 +47,8 @@ public class ConfiguracionService {
             "UNIDAD_POLICIAL", "Unidad Policial",
             "RESULTADO_PROCEDIMIENTO", "Resultado de Procedimiento",
             "CANAL_ENLACE", "Canal de Enlace",
-            "TIPO_PATRULLAJE", "Tipo de Patrullaje");
+            "TIPO_PATRULLAJE", "Tipo de Patrullaje",
+            "RESULTADO_PATRULLAJE", "Resultado de Patrullaje Preventivo");
 
     // ──────────────────────────────────────────────
     // PARÁMETROS DEL SISTEMA (Tiempos de Respuesta y otros)

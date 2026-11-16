@@ -10,6 +10,7 @@ import com.conectatech.sgs_backend.service.PatrullajeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +44,17 @@ public class PatrullajeController {
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR', 'INSPECTOR')")
     public ResponseEntity<List<PatrullajeDTO>> obtenerPatrullajesActivos() {
         return ResponseEntity.ok(patrullajeService.listarActivos());
+    }
+
+    @GetMapping("/historial")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR', 'INSPECTOR')")
+    public ResponseEntity<List<PatrullajeDTO>> obtenerHistorialPatrullajes(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+            @RequestParam(required = false) String sector,
+            @RequestParam(required = false) String inspectorId,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(patrullajeService.listarHistorial(fechaInicio, fechaFin, sector, inspectorId, estado));
     }
 
     @GetMapping("/{id}")
