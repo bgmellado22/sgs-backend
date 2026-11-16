@@ -189,7 +189,7 @@ public class IncidenteControllerTest {
         dto.setCodigoCorrelativo("INC-999");
         dto.setDescripcion("Prueba con teléfono +569 1234 (urgente)");
 
-        when(incidenteService.buscarIncidentesAvanzadoPaginado(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(incidenteService.buscarIncidentesAvanzadoPaginado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1));
 
         mockMvc.perform(get("/api/v1/incidentes/paginado")
@@ -199,6 +199,26 @@ public class IncidenteControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("inc-paginado-1"))
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /incidentes/paginado con filtro de origen → 200 OK")
+    public void testObtenerIncidentesPaginado_ConOrigen_Retorna200() throws Exception {
+        IncidenteResponseDTO dto = new IncidenteResponseDTO();
+        dto.setId("inc-origen-1");
+        dto.setCodigoCorrelativo("INC-101");
+        dto.setOrigen("LLAMADA");
+
+        when(incidenteService.buscarIncidentesAvanzadoPaginado(any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.eq("LLAMADA"), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1));
+
+        mockMvc.perform(get("/api/v1/incidentes/paginado")
+                .param("origen", "LLAMADA")
+                .with(user("operador").roles("OPERADOR"))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("inc-origen-1"))
+                .andExpect(jsonPath("$.content[0].origen").value("LLAMADA"));
     }
 
     @Test

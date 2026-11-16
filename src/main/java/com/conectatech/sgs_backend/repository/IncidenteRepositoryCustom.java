@@ -15,6 +15,7 @@ public interface IncidenteRepositoryCustom {
             String tipo,
             String estado,
             String prioridad,
+            String origen,
             boolean soloInactivos,
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin);
@@ -25,9 +26,21 @@ public interface IncidenteRepositoryCustom {
             String tipo,
             String estado,
             String prioridad,
+            boolean soloInactivos,
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin) {
-        return buscarConFiltrosAvanzados(textoBusqueda, categoria, tipo, estado, prioridad, false, fechaInicio, fechaFin);
+        return buscarConFiltrosAvanzados(textoBusqueda, categoria, tipo, estado, prioridad, null, soloInactivos, fechaInicio, fechaFin);
+    }
+
+    default List<Incidente> buscarConFiltrosAvanzados(
+            String textoBusqueda,
+            String categoria,
+            String tipo,
+            String estado,
+            String prioridad,
+            LocalDateTime fechaInicio,
+            LocalDateTime fechaFin) {
+        return buscarConFiltrosAvanzados(textoBusqueda, categoria, tipo, estado, prioridad, null, false, fechaInicio, fechaFin);
     }
 
     Page<Incidente> buscarConFiltrosAvanzadosPaginado(
@@ -36,6 +49,7 @@ public interface IncidenteRepositoryCustom {
             String tipo,
             String estado,
             String prioridad,
+            String origen,
             boolean soloInactivos,
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin,
@@ -47,10 +61,23 @@ public interface IncidenteRepositoryCustom {
             String tipo,
             String estado,
             String prioridad,
+            boolean soloInactivos,
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin,
             Pageable pageable) {
-        return buscarConFiltrosAvanzadosPaginado(textoBusqueda, categoria, tipo, estado, prioridad, false, fechaInicio, fechaFin, pageable);
+        return buscarConFiltrosAvanzadosPaginado(textoBusqueda, categoria, tipo, estado, prioridad, null, soloInactivos, fechaInicio, fechaFin, pageable);
+    }
+
+    default Page<Incidente> buscarConFiltrosAvanzadosPaginado(
+            String textoBusqueda,
+            String categoria,
+            String tipo,
+            String estado,
+            String prioridad,
+            LocalDateTime fechaInicio,
+            LocalDateTime fechaFin,
+            Pageable pageable) {
+        return buscarConFiltrosAvanzadosPaginado(textoBusqueda, categoria, tipo, estado, prioridad, null, false, fechaInicio, fechaFin, pageable);
     }
 
     // Método para KPI

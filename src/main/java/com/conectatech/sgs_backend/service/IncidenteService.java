@@ -906,6 +906,7 @@ public class IncidenteService {
                         String tipo,
                         String estado,
                         String prioridad,
+                        String origen,
                         Boolean soloInactivos,
                         LocalDateTime fechaInicio,
                         LocalDateTime fechaFin) {
@@ -925,6 +926,7 @@ public class IncidenteService {
                                 tipo,
                                 estado,
                                 prioridad,
+                                origen,
                                 buscarInactivos,
                                 fechaInicio,
                                 fechaFin);
@@ -940,9 +942,21 @@ public class IncidenteService {
                         String tipo,
                         String estado,
                         String prioridad,
+                        Boolean soloInactivos,
                         LocalDateTime fechaInicio,
                         LocalDateTime fechaFin) {
-                return buscarIncidentesAvanzado(textoBusqueda, categoria, tipo, estado, prioridad, false, fechaInicio, fechaFin);
+                return buscarIncidentesAvanzado(textoBusqueda, categoria, tipo, estado, prioridad, null, soloInactivos, fechaInicio, fechaFin);
+        }
+
+        public List<IncidenteResponseDTO> buscarIncidentesAvanzado(
+                        String textoBusqueda,
+                        String categoria,
+                        String tipo,
+                        String estado,
+                        String prioridad,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin) {
+                return buscarIncidentesAvanzado(textoBusqueda, categoria, tipo, estado, prioridad, null, false, fechaInicio, fechaFin);
         }
 
         // Método para buscar incidentes paginados con filtros avanzados
@@ -952,6 +966,7 @@ public class IncidenteService {
                         String tipo,
                         String estado,
                         String prioridad,
+                        String origen,
                         Boolean soloInactivos,
                         LocalDateTime fechaInicio,
                         LocalDateTime fechaFin,
@@ -972,6 +987,7 @@ public class IncidenteService {
                                 tipo,
                                 estado,
                                 prioridad,
+                                origen,
                                 buscarInactivos,
                                 fechaInicio,
                                 fechaFin,
@@ -986,10 +1002,23 @@ public class IncidenteService {
                         String tipo,
                         String estado,
                         String prioridad,
+                        Boolean soloInactivos,
                         LocalDateTime fechaInicio,
                         LocalDateTime fechaFin,
                         Pageable pageable) {
-                return buscarIncidentesAvanzadoPaginado(textoBusqueda, categoria, tipo, estado, prioridad, false, fechaInicio, fechaFin, pageable);
+                return buscarIncidentesAvanzadoPaginado(textoBusqueda, categoria, tipo, estado, prioridad, null, soloInactivos, fechaInicio, fechaFin, pageable);
+        }
+
+        public Page<IncidenteResponseDTO> buscarIncidentesAvanzadoPaginado(
+                        String textoBusqueda,
+                        String categoria,
+                        String tipo,
+                        String estado,
+                        String prioridad,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin,
+                        Pageable pageable) {
+                return buscarIncidentesAvanzadoPaginado(textoBusqueda, categoria, tipo, estado, prioridad, null, false, fechaInicio, fechaFin, pageable);
         }
 
         private void asignarVencimientoTiempoRespuesta(Incidente incidente) {

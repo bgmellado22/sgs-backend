@@ -35,7 +35,7 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
 
     private Query construirQueryFiltros(
             String textoBusqueda, String categoria, String tipo,
-            String estado, String prioridad, boolean soloInactivos,
+            String estado, String prioridad, String origen, boolean soloInactivos,
             LocalDateTime fechaInicio, LocalDateTime fechaFin) {
         Query query = new Query();
         List<Criteria> criterios = new ArrayList<>();
@@ -90,6 +90,10 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
         if (prioridad != null && !prioridad.isBlank()) {
             criterios.add(Criteria.where("prioridad").is(prioridad));
         }
+        if (origen != null && !origen.isBlank()) {
+            String origenTrim = origen.trim();
+            criterios.add(Criteria.where("origen").regex("^" + Pattern.quote(origenTrim) + "$", "i"));
+        }
 
         // Filtro por rango de fechas de creación
         if (fechaInicio != null && fechaFin != null) {
@@ -111,18 +115,18 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
     @Override
     public List<Incidente> buscarConFiltrosAvanzados(
             String textoBusqueda, String categoria, String tipo,
-            String estado, String prioridad, boolean soloInactivos,
+            String estado, String prioridad, String origen, boolean soloInactivos,
             LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        Query query = construirQueryFiltros(textoBusqueda, categoria, tipo, estado, prioridad, soloInactivos, fechaInicio, fechaFin);
+        Query query = construirQueryFiltros(textoBusqueda, categoria, tipo, estado, prioridad, origen, soloInactivos, fechaInicio, fechaFin);
         return mongoTemplate.find(query, Incidente.class);
     }
 
     @Override
     public Page<Incidente> buscarConFiltrosAvanzadosPaginado(
             String textoBusqueda, String categoria, String tipo,
-            String estado, String prioridad, boolean soloInactivos,
+            String estado, String prioridad, String origen, boolean soloInactivos,
             LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable) {
-        Query query = construirQueryFiltros(textoBusqueda, categoria, tipo, estado, prioridad, soloInactivos, fechaInicio, fechaFin);
+        Query query = construirQueryFiltros(textoBusqueda, categoria, tipo, estado, prioridad, origen, soloInactivos, fechaInicio, fechaFin);
         long total = mongoTemplate.count(query, Incidente.class);
         query.with(pageable);
         List<Incidente> resultados = mongoTemplate.find(query, Incidente.class);

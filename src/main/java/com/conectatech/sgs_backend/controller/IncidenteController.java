@@ -61,13 +61,14 @@ public class IncidenteController {
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String prioridad,
+            @RequestParam(required = false) String origen,
             @RequestParam(required = false) Boolean soloInactivos,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
             @PageableDefault(size = 10, sort = "fecha_creacion", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<IncidenteResponseDTO> pagina = incidenteService.buscarIncidentesAvanzadoPaginado(
-                textoBusqueda, categoria, tipo, estado, prioridad, soloInactivos, fechaInicio, fechaFin, pageable);
+                textoBusqueda, categoria, tipo, estado, prioridad, origen, soloInactivos, fechaInicio, fechaFin, pageable);
         return ResponseEntity.ok(pagina);
     }
 
