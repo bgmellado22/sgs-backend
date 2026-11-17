@@ -164,6 +164,34 @@ public class IncidenteService {
                 registrarAuditoria(guardado.getId(), guardado.getCodigoCorrelativo(), actor, "Creación",
                                 null, "Pendiente", comentarioBitacora);
 
+                // Notificación en tiempo real vía WebSocket hacia la Central de Seguridad
+                boolean esSos = "SOS".equalsIgnoreCase(guardado.getCategoria())
+                                || (guardado.getTipo() != null && guardado.getTipo().toUpperCase().contains("SOS"));
+
+                if (esSos) {
+                        String direccion = (guardado.getDireccionTexto() != null && !guardado.getDireccionTexto().isBlank())
+                                        ? guardado.getDireccionTexto()
+                                        : "Comuna de El Tabo";
+                        Notificacion alertaSOS = Notificacion.builder()
+                                        .titulo("ALERTA SOS - BOTÓN DE PÁNICO")
+                                        .mensaje("¡Alerta SOS de emergencia en " + direccion + "!")
+                                        .tipo(TipoNotificacion.ALERTA)
+                                        .referenciaId(guardado.getId())
+                                        .usuarioDestinoId("GLOBAL")
+                                        .build();
+                        websocketService.despacharAlertaGlobal(alertaSOS);
+                } else {
+                        Notificacion alertaNueva = Notificacion.builder()
+                                        .titulo("Nueva Denuncia Registrada")
+                                        .mensaje("Se ha registrado una nueva denuncia: " + guardado.getCodigoCorrelativo()
+                                                        + " (" + guardado.getTipo() + ")")
+                                        .tipo(TipoNotificacion.INFORMATIVO)
+                                        .referenciaId(guardado.getId())
+                                        .usuarioDestinoId("GLOBAL")
+                                        .build();
+                        websocketService.despacharAlertaGlobal(alertaNueva);
+                }
+
                 return mapToDTO(guardado);
         }
 
