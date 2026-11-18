@@ -100,6 +100,11 @@ public class ClaveUnicaService {
                         "Acceso exclusivo municipal: Esta plataforma web es de uso exclusivo para personal administrativo y operativo. " +
                         "Para realizar reportes vecinales o consultar incidentes, por favor utiliza la aplicación móvil 'Más Seguridad'.");
             }
+        } else if ("MOVIL".equalsIgnoreCase(request.getCanal())) {
+            if (usuario.getRol() == RolUsuario.ADMINISTRADOR || usuario.getRol() == RolUsuario.OPERADOR) {
+                log.warn("Usuario {} con rol {} intentó ingresar a la aplicación móvil.", usuario.getRun(), usuario.getRol());
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuario no disponible en la app móvil.");
+            }
         }
 
         // Actualizar marca temporal de último acceso
