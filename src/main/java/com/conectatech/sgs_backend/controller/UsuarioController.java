@@ -60,9 +60,23 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioActualizado);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<UsuarioResponseDTO> obtenerMiPerfil() {
+        return ResponseEntity.ok(usuarioService.obtenerMiPerfil());
+    }
+
     @PutMapping("/me")
     public ResponseEntity<UsuarioResponseDTO> actualizarMiPerfil(@jakarta.validation.Valid @RequestBody com.conectatech.sgs_backend.dto.MiPerfilUpdateDTO updateDTO) {
         UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarMiPerfil(updateDTO);
+        return ResponseEntity.ok(usuarioActualizado);
+    }
+
+    @PatchMapping("/inspector/disponibilidad")
+    @PreAuthorize("hasAnyRole('INSPECTOR', 'ADMINISTRADOR')")
+    public ResponseEntity<UsuarioResponseDTO> cambiarDisponibilidadInspector(
+            @RequestBody(required = false) java.util.Map<String, Boolean> body) {
+        Boolean disponible = (body != null && body.containsKey("disponible")) ? body.get("disponible") : null;
+        UsuarioResponseDTO usuarioActualizado = usuarioService.cambiarDisponibilidadInspectorActual(disponible);
         return ResponseEntity.ok(usuarioActualizado);
     }
 }

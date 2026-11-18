@@ -143,6 +143,49 @@ public class UsuarioService {
                 return mapToDTO(usuarioActualizado);
         }
 
+        // Cambiar disponibilidad de inspector (Turno / Operatividad móvil)
+        public UsuarioResponseDTO cambiarDisponibilidadInspectorActual(Boolean disponible) {
+                Usuario actor = auditoriaService.getUsuarioActual();
+                if (actor == null) {
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No hay una sesión activa para modificar disponibilidad.");
+                }
+
+                Usuario inspector = usuarioRepository.findById(actor.getId())
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con ID: " + actor.getId()));
+
+                if (inspector.getRol() != RolUsuario.INSPECTOR && inspector.getRol() != RolUsuario.ADMINISTRADOR) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el personal de inspección o administración puede alternar disponibilidad de patrulla.");
+                }
+
+                boolean nuevoEstado = disponible != null ? disponible : !Boolean.TRUE.equals(inspector.getDisponible());
+                boolean estadoAnterior = Boolean.TRUE.equals(inspector.getDisponible());
+                inspector.setDisponible(nuevoEstado);
+
+                Usuario guardado = usuarioRepository.save(inspector);
+
+                String estadoAntStr = estadoAnterior ? "Disponible (En Turno)" : "No Disponible (Fuera de Servicio)";
+                String estadoNueStr = nuevoEstado ? "Disponible (En Turno)" : "No Disponible (Fuera de Servicio)";
+                auditoriaService.registrarAuditoria(
+                                "INSPECTOR_DISPONIBILIDAD",
+                                estadoAntStr,
+                                estadoNueStr,
+                                "Inspector " + inspector.getNombreCompleto() + " cambió su disponibilidad a " + estadoNueStr
+                );
+
+                return mapToDTO(guardado);
+        }
+
+        // Obtener perfil autenticado actual
+        public UsuarioResponseDTO obtenerMiPerfil() {
+                Usuario actor = auditoriaService.getUsuarioActual();
+                if (actor == null) {
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No hay una sesión activa.");
+                }
+                Usuario usuario = usuarioRepository.findById(actor.getId())
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+                return mapToDTO(usuario);
+        }
+
         // Obtener inspectores activos (para el mapa operativo)
         public List<UsuarioResponseDTO> obtenerInspectoresActivos() {
                 List<Usuario> inspectores = usuarioRepository.findByRolAndEstado(RolUsuario.INSPECTOR, true);
@@ -172,6 +215,7 @@ public class UsuarioService {
                                 .email(usuario.getEmail())
                                 .rol(usuario.getRol())
                                 .estado(usuario.getEstado())
+                                .disponible(Boolean.TRUE.equals(usuario.getDisponible()))
                                 .ultimoAcceso(usuario.getUltimoAcceso())
                                 .fechaRegistro(fecha)
                                 .build();

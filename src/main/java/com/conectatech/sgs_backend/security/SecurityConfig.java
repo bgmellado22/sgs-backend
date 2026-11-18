@@ -34,14 +34,17 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .headers(headers -> headers
                                                 .contentSecurityPolicy(csp -> csp
-                                                                .policyDirectives("default-src 'self'; frame-ancestors 'none';"))
+                                                                .policyDirectives(
+                                                                                "default-src 'self'; frame-ancestors 'none';"))
                                                 .frameOptions(frame -> frame.deny())
-                                                .contentTypeOptions(contentType -> {})
+                                                .contentTypeOptions(contentType -> {
+                                                })
                                                 .httpStrictTransportSecurity(hsts -> hsts
                                                                 .includeSubDomains(true)
                                                                 .maxAgeInSeconds(31536000)))
                                 .authorizeHttpRequests(auth -> auth
-                                                // Rutas públicas: Autenticación, Swagger y ruta interna de errores de Spring
+                                                // Rutas públicas: Autenticación, Swagger y ruta interna de errores de
+                                                // Spring
                                                 .requestMatchers(
                                                                 "/api/v1/auth/login",
                                                                 "/api/v1/auth/register",
@@ -56,8 +59,13 @@ public class SecurityConfig {
                                                 // Módulo de Administración
                                                 .requestMatchers("/api/v1/usuarios/inspectores")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR", "INSPECTOR")
-                                                // Edición de perfil propio permitida para cualquier usuario autenticado
-                                                .requestMatchers(HttpMethod.PUT, "/api/v1/usuarios/me")
+                                                // Disponibilidad táctica del inspector
+                                                .requestMatchers(HttpMethod.PATCH,
+                                                                "/api/v1/usuarios/inspector/disponibilidad")
+                                                .hasAnyRole("INSPECTOR", "ADMINISTRADOR")
+                                                // Consulta y edición de perfil propio permitida para cualquier usuario
+                                                // autenticado
+                                                .requestMatchers("/api/v1/usuarios/me")
                                                 .authenticated()
                                                 // Lectura de catálogos (formularios y colores de badges);
                                                 // la escritura va por /api/v1/configuracion (solo ADMINISTRADOR)
@@ -73,7 +81,8 @@ public class SecurityConfig {
                                                 // Módulo de Reportes
                                                 .requestMatchers("/api/v1/reportes/**").hasRole("ADMINISTRADOR")
 
-                                                // Módulo de Configuración del Sistema (Acceso EXCLUSIVO para Administradores)
+                                                // Módulo de Configuración del Sistema (Acceso EXCLUSIVO para
+                                                // Administradores)
                                                 .requestMatchers("/api/v1/configuracion/**")
                                                 .hasRole("ADMINISTRADOR")
 
@@ -90,7 +99,8 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.PUT, "/api/v1/incidentes",
                                                                 "/api/v1/incidentes/**")
                                                 .hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                                                // Reactivación de denuncias inactivas (Acceso EXCLUSIVO para Administradores)
+                                                // Reactivación de denuncias inactivas (Acceso EXCLUSIVO para
+                                                // Administradores)
                                                 .requestMatchers(HttpMethod.PATCH, "/api/v1/incidentes/*/reactivar")
                                                 .hasRole("ADMINISTRADOR")
                                                 .requestMatchers(HttpMethod.PATCH, "/api/v1/incidentes",

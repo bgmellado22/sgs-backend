@@ -18,6 +18,7 @@ public class UsuarioResponseDTO {
     private String email;
     private RolUsuario rol;
     private Boolean estado;
+    private Boolean disponible;
     private LocalDateTime ultimoAcceso;
     private LocalDateTime fechaRegistro;
 }

@@ -44,6 +44,10 @@ public class Usuario implements UserDetails {
 
     private Boolean estado;
 
+    @Field("disponible")
+    @Builder.Default
+    private Boolean disponible = false;
+
     private String fcmToken;
 
     @Field("intentos_fallidos")
