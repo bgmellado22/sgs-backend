@@ -62,6 +62,7 @@ public class JwtUtil {
             extraClaims.put("nombres", u.getNombres());
             extraClaims.put("primerApellido", u.getPrimerApellido());
             extraClaims.put("segundoApellido", u.getSegundoApellido());
+            extraClaims.put("run", u.getRun());
         }
 
         return generateToken(extraClaims, userDetails);
