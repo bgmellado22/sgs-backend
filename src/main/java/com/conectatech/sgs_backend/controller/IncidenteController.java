@@ -47,6 +47,21 @@ public class IncidenteController {
         return ResponseEntity.ok(incidenteService.obtenerTodos());
     }
 
+    // Historial Ciudadano (R1: incluye denuncias inactivas o cerradas)
+    @GetMapping("/ciudadano/{run}")
+    public ResponseEntity<List<IncidenteResponseDTO>> obtenerPorCiudadanoRun(
+            @PathVariable("run") String run,
+            @RequestParam(value = "incluirInactivos", defaultValue = "true") boolean incluirInactivos) {
+        return ResponseEntity.ok(incidenteService.obtenerPorCiudadanoRun(run, incluirInactivos));
+    }
+
+    // Verificar estado de Cooldown SOS (R6: 15 minutos)
+    @GetMapping("/sos/cooldown")
+    public ResponseEntity<Map<String, Object>> verificarCooldownSos(
+            @RequestParam(required = false) String run) {
+        return ResponseEntity.ok(incidenteService.verificarCooldownSos(run));
+    }
+
     // Obtener un incidente por ID
     @GetMapping("/{id}")
     public ResponseEntity<IncidenteResponseDTO> obtenerPorId(@PathVariable("id") String id) {

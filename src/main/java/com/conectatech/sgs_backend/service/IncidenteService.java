@@ -26,6 +26,7 @@ import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -61,6 +62,7 @@ public class IncidenteService {
         private final GridFsTemplate gridFsTemplate;
         private final AuditoriaService auditoriaService;
         private final ApplicationEventPublisher eventPublisher;
+        private final MongoTemplate mongoTemplate;
 
         // Guardar sin archivo (compatibilidad)
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto) {
@@ -69,6 +71,9 @@ public class IncidenteService {
 
         // Guardar con soporte de evidencia fotográfica (imagen)
         public IncidenteResponseDTO crearIncidente(IncidenteRequestDTO dto, MultipartFile foto) {
+                // Validación de Cooldown de Alerta SOS (15 minutos para evitar spam/duplicados)
+                validarCooldownSos(dto);
+
                 Incidente incidente = new Incidente();
 
                 incidente.setCategoria(dto.getCategoria());
@@ -523,6 +528,125 @@ public class IncidenteService {
                                 .stream()
                                 .map(this::mapToDTO)
                                 .collect(Collectors.toList());
+        }
+
+        // Obtener historial completo de denuncias de un ciudadano (incluso si están inactivas/cerradas en el panel web)
+        public List<IncidenteResponseDTO> obtenerPorCiudadanoRun(String run, boolean incluirInactivos) {
+                if (run == null || run.isBlank()) {
+                        Usuario actor = auditoriaService.getUsuarioActual();
+                        if (actor != null && actor.getRun() != null) {
+                                run = actor.getRun();
+                        }
+                }
+                if (run == null || run.isBlank()) {
+                        return Collections.emptyList();
+                }
+
+                String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
+                String regexPattern = "^" + cleanRun.replaceAll("(?<=.)", "[.\\-\\s]*") + "$";
+
+                Query query = new Query();
+                query.addCriteria(Criteria.where("denunciante.run").regex(regexPattern, "i"));
+                if (!incluirInactivos) {
+                        query.addCriteria(Criteria.where("activo").is(true));
+                }
+                query.with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fecha_creacion"));
+
+                List<Incidente> incidentes = mongoTemplate.find(query, Incidente.class);
+                return incidentes.stream()
+                                .map(this::mapToDTO)
+                                .collect(Collectors.toList());
+        }
+
+        // Verificar estado de Cooldown SOS (15 minutos)
+        public java.util.Map<String, Object> verificarCooldownSos(String runParam) {
+                String run = runParam;
+                if (run == null || run.isBlank()) {
+                        Usuario actor = auditoriaService.getUsuarioActual();
+                        if (actor != null && actor.getRun() != null) {
+                                run = actor.getRun();
+                        }
+                }
+
+                java.util.Map<String, Object> respuesta = new java.util.HashMap<>();
+                if (run == null || run.isBlank()) {
+                        respuesta.put("cooldownActivo", false);
+                        respuesta.put("segundosRestantes", 0L);
+                        respuesta.put("minutosRestantes", 0);
+                        return respuesta;
+                }
+
+                String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
+                String regexPattern = "^" + cleanRun.replaceAll("(?<=.)", "[.\\-\\s]*") + "$";
+                LocalDateTime hace15Min = LocalDateTime.now().minusMinutes(15);
+
+                Query query = new Query();
+                query.addCriteria(Criteria.where("denunciante.run").regex(regexPattern, "i")
+                                .and("categoria").is("SOS")
+                                .and("fecha_creacion").gte(hace15Min));
+                query.with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fecha_creacion"));
+                query.limit(1);
+
+                Incidente ultimoSos = mongoTemplate.findOne(query, Incidente.class);
+                if (ultimoSos != null && ultimoSos.getFechaCreacion() != null) {
+                        long segundosTranscurridos = ChronoUnit.SECONDS.between(ultimoSos.getFechaCreacion(), LocalDateTime.now());
+                        long segundosRestantes = Math.max(0, (15 * 60) - segundosTranscurridos);
+                        int minutosRestantes = (int) Math.ceil((double) segundosRestantes / 60.0);
+
+                        respuesta.put("cooldownActivo", segundosRestantes > 0);
+                        respuesta.put("segundosRestantes", segundosRestantes);
+                        respuesta.put("minutosRestantes", minutosRestantes);
+                        respuesta.put("ultimaAlerta", ultimoSos.getFechaCreacion());
+                        respuesta.put("codigoUltimaAlerta", ultimoSos.getCodigoCorrelativo());
+                } else {
+                        respuesta.put("cooldownActivo", false);
+                        respuesta.put("segundosRestantes", 0L);
+                        respuesta.put("minutosRestantes", 0);
+                }
+
+                return respuesta;
+        }
+
+        private void validarCooldownSos(IncidenteRequestDTO dto) {
+                boolean esSos = "SOS".equalsIgnoreCase(dto.getCategoria())
+                                || "SOS".equalsIgnoreCase(dto.getTipo())
+                                || (dto.getTipo() != null && dto.getTipo().toUpperCase().contains("SOS"))
+                                || (dto.getDescripcion() != null && dto.getDescripcion().toUpperCase().contains("SOS"));
+
+                if (!esSos) {
+                        return;
+                }
+
+                String run = dto.getDenunciante() != null ? dto.getDenunciante().getRun() : null;
+                if (run == null || run.isBlank()) {
+                        Usuario actor = auditoriaService.getUsuarioActual();
+                        if (actor != null) {
+                                run = actor.getRun();
+                        }
+                }
+
+                if (run != null && !run.isBlank()) {
+                        String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
+                        String regexPattern = "^" + cleanRun.replaceAll("(?<=.)", "[.\\-\\s]*") + "$";
+                        LocalDateTime hace15Min = LocalDateTime.now().minusMinutes(15);
+
+                        Query query = new Query();
+                        query.addCriteria(Criteria.where("denunciante.run").regex(regexPattern, "i")
+                                        .and("categoria").is("SOS")
+                                        .and("fecha_creacion").gte(hace15Min));
+                        query.with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fecha_creacion"));
+                        query.limit(1);
+
+                        Incidente ultimoSos = mongoTemplate.findOne(query, Incidente.class);
+                        if (ultimoSos != null && ultimoSos.getFechaCreacion() != null) {
+                                long segundosTranscurridos = ChronoUnit.SECONDS.between(ultimoSos.getFechaCreacion(), LocalDateTime.now());
+                                long segundosRestantes = Math.max(0, (15 * 60) - segundosTranscurridos);
+                                if (segundosRestantes > 0) {
+                                        throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                                                        "Alerta SOS activa recientemente. Próxima activación disponible en " + segundosRestantes + " segundos.");
+                                }
+                        }
+                }
         }
 
         // Obtener un único incidente por ID
