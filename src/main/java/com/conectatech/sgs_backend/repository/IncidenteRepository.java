@@ -15,4 +15,8 @@ public interface IncidenteRepository extends MongoRepository<Incidente, String>,
     List<Incidente> findByActivoTrue();
 
     List<Incidente> findByEstadoNotIn(List<String> estados);
+
+    List<Incidente> findByDenuncianteRunOrderByFechaCreacionDesc(String run);
+
+    List<Incidente> findByDenuncianteRunAndActivoTrueOrderByFechaCreacionDesc(String run);
 }
