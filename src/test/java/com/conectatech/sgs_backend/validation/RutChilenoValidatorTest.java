@@ -27,6 +27,11 @@ public class RutChilenoValidatorTest {
         // Caso con dígito verificador K (11.111.112-K)
         assertTrue(validator.isValid("11.111.112-K", null));
         assertTrue(validator.isValid("11111112-k", null));
+        // Cuentas de prueba de ClaveÚnica
+        assertTrue(validator.isValid("99.999.999-9", null));
+        assertTrue(validator.isValid("99999999-9", null));
+        assertTrue(validator.isValid("88.888.888-8", null));
+        assertTrue(validator.isValid("55.555.555-5", null));
     }
 
     @Test

@@ -26,7 +26,9 @@ public class RutChilenoValidator implements ConstraintValidator<RutChileno, Stri
 
         try {
             long cuerpoNum = Long.parseLong(cuerpo);
-            if (cuerpoNum >= 50000000L) {
+            // Permitir cuentas de prueba y simulación oficial de ClaveÚnica (99.999.999, 88.888.888, 55.555.555)
+            boolean esCuentaPruebaClaveUnica = (cuerpoNum == 99999999L || cuerpoNum == 88888888L || cuerpoNum == 55555555L);
+            if (cuerpoNum >= 50000000L && !esCuentaPruebaClaveUnica) {
                 return false; // Personas naturales (< 50 millones)
             }
         } catch (NumberFormatException e) {
