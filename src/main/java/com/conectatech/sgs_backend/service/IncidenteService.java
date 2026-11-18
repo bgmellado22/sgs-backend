@@ -542,8 +542,7 @@ public class IncidenteService {
                         return Collections.emptyList();
                 }
 
-                String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
-                String regexPattern = "^" + cleanRun.replaceAll("(?<=.)", "[.\\-\\s]*") + "$";
+                String regexPattern = construirRegexRun(run);
 
                 Query query = new Query();
                 query.addCriteria(Criteria.where("denunciante.run").regex(regexPattern, "i"));
@@ -576,8 +575,7 @@ public class IncidenteService {
                         return respuesta;
                 }
 
-                String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
-                String regexPattern = "^" + cleanRun.replaceAll("(?<=.)", "[.\\-\\s]*") + "$";
+                String regexPattern = construirRegexRun(run);
                 LocalDateTime hace15Min = LocalDateTime.now().minusMinutes(15);
 
                 Query query = new Query();
@@ -626,8 +624,7 @@ public class IncidenteService {
                 }
 
                 if (run != null && !run.isBlank()) {
-                        String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
-                        String regexPattern = "^" + cleanRun.replaceAll("(?<=.)", "[.\\-\\s]*") + "$";
+                        String regexPattern = construirRegexRun(run);
                         LocalDateTime hace15Min = LocalDateTime.now().minusMinutes(15);
 
                         Query query = new Query();
@@ -647,6 +644,22 @@ public class IncidenteService {
                                 }
                         }
                 }
+        }
+
+        private String construirRegexRun(String run) {
+                if (run == null || run.isBlank()) {
+                        return "";
+                }
+                String cleanRun = run.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
+                StringBuilder sb = new StringBuilder("^\\s*");
+                for (int i = 0; i < cleanRun.length(); i++) {
+                        if (i > 0) {
+                                sb.append("[.\\-\\s]*");
+                        }
+                        sb.append(cleanRun.charAt(i));
+                }
+                sb.append("\\s*$");
+                return sb.toString();
         }
 
         // Obtener un único incidente por ID
