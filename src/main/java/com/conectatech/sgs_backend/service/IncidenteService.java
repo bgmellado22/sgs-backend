@@ -185,16 +185,6 @@ public class IncidenteService {
                                         .usuarioDestinoId("GLOBAL")
                                         .build();
                         websocketService.despacharAlertaGlobal(alertaSOS);
-                } else {
-                        Notificacion alertaNueva = Notificacion.builder()
-                                        .titulo("Nueva Denuncia Registrada")
-                                        .mensaje("Se ha registrado una nueva denuncia: " + guardado.getCodigoCorrelativo()
-                                                        + " (" + guardado.getTipo() + ")")
-                                        .tipo(TipoNotificacion.INFORMATIVO)
-                                        .referenciaId(guardado.getId())
-                                        .usuarioDestinoId("GLOBAL")
-                                        .build();
-                        websocketService.despacharAlertaGlobal(alertaNueva);
                 }
 
                 return mapToDTO(guardado);
