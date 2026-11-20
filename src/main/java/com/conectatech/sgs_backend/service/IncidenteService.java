@@ -178,7 +178,7 @@ public class IncidenteService {
                                         ? guardado.getDireccionTexto()
                                         : "Comuna de El Tabo";
                         Notificacion alertaSOS = Notificacion.builder()
-                                        .titulo("ALERTA SOS - BOTÓN DE PÁNICO")
+                                        .titulo("ALERTA SOS")
                                         .mensaje("¡Alerta SOS de emergencia en " + direccion + "!")
                                         .tipo(TipoNotificacion.ALERTA)
                                         .referenciaId(guardado.getId())
