@@ -4,6 +4,8 @@ import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.enums.EstadoNotificacion;
 import com.conectatech.sgs_backend.repository.NotificacionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +23,11 @@ public class NotificacionService {
     // Obtener todo el historial (específico del operador o global) ordenado por fecha descendente
     public List<Notificacion> obtenerNotificacionesPorUsuario(String usuarioDestinoId) {
         return notificacionRepository.findByUsuarioDestinoIdInOrderByFechaCreacionDesc(List.of(usuarioDestinoId, "GLOBAL"));
+    }
+
+    // Obtener notificaciones paginadas (específico del operador o global) para scroll infinito
+    public Page<Notificacion> obtenerNotificacionesPaginadasPorUsuario(String usuarioDestinoId, Pageable pageable) {
+        return notificacionRepository.findByUsuarioDestinoIdIn(List.of(usuarioDestinoId, "GLOBAL"), pageable);
     }
 
     // Obtener el número para la campana de alertas en el NavBar

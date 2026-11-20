@@ -2,6 +2,8 @@ package com.conectatech.sgs_backend.repository;
 
 import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.enums.EstadoNotificacion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Collection;
@@ -10,6 +12,9 @@ import java.util.List;
 public interface NotificacionRepository extends MongoRepository<Notificacion, String> {
     // Cargar campana de notificaciones por usuario o alertas globales
     List<Notificacion> findByUsuarioDestinoIdInOrderByFechaCreacionDesc(Collection<String> usuarioDestinoIds);
+
+    // Paginación para scroll infinito
+    Page<Notificacion> findByUsuarioDestinoIdIn(Collection<String> usuarioDestinoIds, Pageable pageable);
 
     List<Notificacion> findByUsuarioDestinoIdOrderByFechaCreacionDesc(String usuarioDestinoId);
 

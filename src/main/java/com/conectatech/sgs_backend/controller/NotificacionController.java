@@ -4,6 +4,10 @@ import com.conectatech.sgs_backend.model.Notificacion;
 import com.conectatech.sgs_backend.model.Usuario;
 import com.conectatech.sgs_backend.service.NotificacionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +27,14 @@ public class NotificacionController {
     public ResponseEntity<List<Notificacion>> obtenerMisNotificaciones(
             @AuthenticationPrincipal Usuario usuarioAuth) {
         return ResponseEntity.ok(notificacionService.obtenerNotificacionesPorUsuario(usuarioAuth.getId()));
+    }
+
+    // Obtener notificaciones paginadas del usuario autenticado para scroll infinito
+    @GetMapping("/paginado")
+    public ResponseEntity<Page<Notificacion>> obtenerMisNotificacionesPaginado(
+            @AuthenticationPrincipal Usuario usuarioAuth,
+            @PageableDefault(size = 15, sort = "fechaCreacion", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(notificacionService.obtenerNotificacionesPaginadasPorUsuario(usuarioAuth.getId(), pageable));
     }
 
     // Obtener el contador de mensajes sin leer para el badge rojo de la campana
