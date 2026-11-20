@@ -46,13 +46,31 @@ public class IncidenteRepositoryCustomImpl implements IncidenteRepositoryCustom 
         // Búsqueda por texto (descripción, código correlativo o datos del denunciante)
         if (textoBusqueda != null && !textoBusqueda.isBlank()) {
             String regex = Pattern.quote(textoBusqueda.trim());
-            Criteria textoCriteria = new Criteria().orOperator(
-                    Criteria.where("descripcion").regex(regex, "i"),
-                    Criteria.where("codigoCorrelativo").regex(regex, "i"),
-                    Criteria.where("denunciante.nombres").regex(regex, "i"),
-                    Criteria.where("denunciante.primer_apellido").regex(regex, "i"),
-                    Criteria.where("denunciante.run").regex(regex, "i"),
-                    Criteria.where("denunciante.telefono").regex(regex, "i"));
+            List<Criteria> orCriterios = new ArrayList<>();
+            orCriterios.add(Criteria.where("descripcion").regex(regex, "i"));
+            orCriterios.add(Criteria.where("codigoCorrelativo").regex(regex, "i"));
+            orCriterios.add(Criteria.where("denunciante.nombres").regex(regex, "i"));
+            orCriterios.add(Criteria.where("denunciante.primer_apellido").regex(regex, "i"));
+            orCriterios.add(Criteria.where("denunciante.run").regex(regex, "i"));
+            orCriterios.add(Criteria.where("denunciante.telefono").regex(regex, "i"));
+            orCriterios.add(Criteria.where("denunciante.correo_electronico").regex(regex, "i"));
+            orCriterios.add(Criteria.where("denunciante.correoElectronico").regex(regex, "i"));
+
+            // Soporte flexible para búsqueda de RUN chileno (sin importar puntos, guiones o espacios)
+            String cleanRun = textoBusqueda.trim().toUpperCase().replaceAll("[.\\-\\s]", "");
+            if (cleanRun.length() >= 7 && cleanRun.length() <= 10 && cleanRun.substring(0, cleanRun.length() - 1).matches("\\d+")) {
+                StringBuilder runRegex = new StringBuilder(".*");
+                for (int i = 0; i < cleanRun.length(); i++) {
+                    if (i > 0) {
+                        runRegex.append("[.\\-\\s]*");
+                    }
+                    runRegex.append(cleanRun.charAt(i));
+                }
+                runRegex.append(".*");
+                orCriterios.add(Criteria.where("denunciante.run").regex(runRegex.toString(), "i"));
+            }
+
+            Criteria textoCriteria = new Criteria().orOperator(orCriterios.toArray(new Criteria[0]));
             criterios.add(textoCriteria);
         }
 
